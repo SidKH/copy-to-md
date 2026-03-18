@@ -26,9 +26,16 @@ const initialData: PopupData = {
   markdown: null,
 };
 
+function formatScrambledTokenCount(value: number) {
+  return value.toLocaleString();
+}
+
 function App() {
   const [data, setData] = useState<PopupData>(initialData);
   const [copied, setCopied] = useState(false);
+  const [scrambledTokenCount, setScrambledTokenCount] = useState(() =>
+    formatScrambledTokenCount(1234),
+  );
   const markdownTokenCount = data.markdown ? countTokens(data.markdown) : null;
   const decorativeLines = [
     "left-[14%] top-0 h-full w-px",
@@ -106,6 +113,21 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (data.state !== "loading") {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      const nextValue = Math.floor(1000 + Math.random() * 9000);
+      setScrambledTokenCount(formatScrambledTokenCount(nextValue));
+    }, 20);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [data.state]);
+
   async function handleCopy() {
     if (!data.markdown) {
       return;
@@ -132,8 +154,14 @@ function App() {
       </div>
       <div className="relative flex h-full items-center justify-center p-3 text-center">
         {data.state === "loading" ? (
-          <section className="flex items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-900" />
+          <section className="flex flex-col items-center justify-center gap-3">
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {scrambledTokenCount} tokens
+            </p>
+            <Button size="lg" disabled>
+              <Copy />
+              Copy markdown
+            </Button>
           </section>
         ) : null}
 
@@ -147,15 +175,17 @@ function App() {
           <section className="flex flex-col items-center justify-center gap-3">
             {copied ? (
               <>
-                <p className="text-sm">Copied to clipboard</p>
-                <Button size="lg" variant="outline" onClick={handleClose}>
+                <p className="text-sm text-muted-foreground">
+                  Copied to clipboard!
+                </p>
+                <Button size="lg" onClick={handleClose}>
                   Close window
                 </Button>
               </>
             ) : (
               <>
                 {markdownTokenCount !== null ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground tabular-nums">
                     {markdownTokenCount.toLocaleString()} tokens
                   </p>
                 ) : null}
