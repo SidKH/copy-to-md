@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   formatRedditThreadAsMarkdown,
   isRedditThreadUrl,
@@ -25,6 +27,7 @@ const initialData: PopupData = {
 
 function App() {
   const [data, setData] = useState<PopupData>(initialData);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -95,12 +98,21 @@ function App() {
     };
   }, []);
 
+  async function handleCopy() {
+    if (!data.markdown) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(data.markdown);
+    setCopied(true);
+  }
+
   return (
-    <main className="w-80 h-80">
-      <div className="h-full p-3">
+    <main className="h-80 w-80">
+      <div className="flex h-full items-center justify-center p-3 text-center">
         {data.state === "loading" ? (
-          <section>
-            Checking the active tab and loading Reddit thread markdown...
+          <section className="flex items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-900" />
           </section>
         ) : null}
 
@@ -111,11 +123,15 @@ function App() {
         {data.state === "error" ? <section>{data.error}</section> : null}
 
         {data.state === "success" ? (
-          <section className="flex h-full flex-col gap-2">
-            <div>Thread Markdown</div>
-            <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words rounded border p-2 text-xs">
-              {data.markdown}
-            </pre>
+          <section className="flex items-center justify-center">
+            {copied ? (
+              <p>Copied to clipboard</p>
+            ) : (
+              <Button size="lg" onClick={() => void handleCopy()}>
+                <Copy />
+                Copy markdown
+              </Button>
+            )}
           </section>
         ) : null}
       </div>
