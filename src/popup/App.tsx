@@ -6,6 +6,7 @@ import {
   isRedditThreadUrl,
   toRedditJsonUrl,
 } from "@/lib/reddit";
+import { countTokens } from "@/lib/tokens";
 
 type PopupState = "loading" | "unsupported" | "error" | "success";
 
@@ -28,6 +29,13 @@ const initialData: PopupData = {
 function App() {
   const [data, setData] = useState<PopupData>(initialData);
   const [copied, setCopied] = useState(false);
+  const markdownTokenCount = data.markdown ? countTokens(data.markdown) : null;
+  const decorativeLines = [
+    "left-[14%] top-0 h-full w-px",
+    "right-[14%] top-0 h-full w-px",
+    "left-0 top-[14%] h-px w-full",
+    "left-0 bottom-[14%] h-px w-full",
+  ];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -107,9 +115,22 @@ function App() {
     setCopied(true);
   }
 
+  function handleClose() {
+    window.close();
+  }
+
   return (
-    <main className="h-80 w-80">
-      <div className="flex h-full items-center justify-center p-3 text-center">
+    <main className="relative h-80 w-80 overflow-hidden bg-stone-50 text-stone-950">
+      <div className="pointer-events-none absolute inset-0">
+        {decorativeLines.map((line) => (
+          <span
+            key={line}
+            className={`absolute bg-neutral-200 ${line}`}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+      <div className="relative flex h-full items-center justify-center p-3 text-center">
         {data.state === "loading" ? (
           <section className="flex items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-900" />
@@ -123,14 +144,26 @@ function App() {
         {data.state === "error" ? <section>{data.error}</section> : null}
 
         {data.state === "success" ? (
-          <section className="flex items-center justify-center">
+          <section className="flex flex-col items-center justify-center gap-3">
             {copied ? (
-              <p>Copied to clipboard</p>
+              <>
+                <p className="text-sm">Copied to clipboard</p>
+                <Button size="lg" variant="outline" onClick={handleClose}>
+                  Close window
+                </Button>
+              </>
             ) : (
-              <Button size="lg" onClick={() => void handleCopy()}>
-                <Copy />
-                Copy markdown
-              </Button>
+              <>
+                {markdownTokenCount !== null ? (
+                  <p className="text-sm text-muted-foreground">
+                    {markdownTokenCount.toLocaleString()} tokens
+                  </p>
+                ) : null}
+                <Button size="lg" onClick={() => void handleCopy()}>
+                  <Copy />
+                  Copy markdown
+                </Button>
+              </>
             )}
           </section>
         ) : null}
