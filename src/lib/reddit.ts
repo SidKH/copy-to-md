@@ -65,17 +65,18 @@ export function formatRedditThreadAsMarkdown(
   const lines = [
     `# ${parsedThread.post.title}`,
     "",
-    `- Thread: ${parsedThread.post.threadUrl}`,
-    `- Author: u/${parsedThread.post.author}`,
-    `- Karma: ${formatKarma(parsedThread.post.score)}`,
-    `- Posted: ${parsedThread.post.postedAt}`,
+    parsedThread.post.threadUrl,
+    "",
+    parsedThread.post.postedAt,
+    "",
+    `u/${parsedThread.post.author}`,
   ];
 
   if (parsedThread.post.body) {
     lines.push("", parsedThread.post.body);
   }
 
-  lines.push("", "## Comments", "");
+  lines.push("", formatKarma(parsedThread.post.score), "", "## Comments", "");
 
   if (parsedThread.comments.length === 0) {
     lines.push("- None");
@@ -151,15 +152,16 @@ function parseComment(thing: unknown): RedditComment | null {
 
 function formatComment(comment: RedditComment, depth: number): string[] {
   const indent = "  ".repeat(depth);
-  const bodyIndent = `${indent}  `;
-  const lines = [`${indent}- u/${comment.author}`];
+  const body = comment.body ? comment.body.replace(/\s*\n+\s*/g, " ") : "";
+  const parts = [`u/${comment.author}`];
 
-  if (comment.body) {
-    const bodyLines = comment.body.split("\n");
-    lines.push(...bodyLines.map((line) => `${bodyIndent}${line}`));
+  if (body) {
+    parts.push(body);
   }
 
-  lines.push(`${bodyIndent}${formatKarma(comment.score)}`);
+  parts.push(formatKarma(comment.score));
+
+  const lines = [`${indent}- ${parts.join(" -- ")}`];
 
   for (const reply of comment.replies) {
     lines.push(...formatComment(reply, depth + 1));
@@ -241,7 +243,11 @@ function formatUtcDate(value: unknown): string {
     return "Unknown";
   }
 
-  return new Date(seconds * 1000).toISOString();
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "long",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(seconds * 1000));
 }
 
 function formatKarma(score: number): string {
