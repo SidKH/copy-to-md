@@ -35,3 +35,219 @@ export function toRedditJsonUrl(url: string): string {
 
   return parsedUrl.toString();
 }
+
+type RedditPost = {
+  title: string;
+  body: string;
+  author: string;
+  score: number;
+  postedAt: string;
+  threadUrl: string;
+};
+
+type RedditComment = {
+  author: string;
+  body: string;
+  score: number;
+  replies: RedditComment[];
+};
+
+export function formatRedditThreadAsMarkdown(
+  payload: unknown,
+  threadUrl?: string,
+): string {
+  const parsedThread = parseRedditThread(payload, threadUrl);
+
+  if (!parsedThread) {
+    return "Failed to parse Reddit thread.";
+  }
+
+  const lines = [
+    `# ${parsedThread.post.title}`,
+    "",
+    `- Thread: ${parsedThread.post.threadUrl}`,
+    `- Author: u/${parsedThread.post.author}`,
+    `- Karma: ${formatKarma(parsedThread.post.score)}`,
+    `- Posted: ${parsedThread.post.postedAt}`,
+  ];
+
+  if (parsedThread.post.body) {
+    lines.push("", parsedThread.post.body);
+  }
+
+  lines.push("", "## Comments", "");
+
+  if (parsedThread.comments.length === 0) {
+    lines.push("- None");
+  } else {
+    lines.push(
+      ...parsedThread.comments.flatMap((comment) => formatComment(comment, 0)),
+    );
+  }
+
+  return lines.join("\n");
+}
+
+function parseRedditThread(
+  payload: unknown,
+  threadUrl?: string,
+): { post: RedditPost; comments: RedditComment[] } | null {
+  if (!Array.isArray(payload) || payload.length < 2) {
+    return null;
+  }
+
+  const postChildren = getListingChildren(payload[0]);
+  const commentChildren = getListingChildren(payload[1]);
+
+  if (!postChildren || !commentChildren) {
+    return null;
+  }
+
+  const postThing = postChildren.find((child) => getKind(child) === "t3");
+  const postData = getDataObject(postThing);
+
+  if (!postData) {
+    return null;
+  }
+
+  const post = parsePost(postData, threadUrl);
+  const comments = commentChildren
+    .map((child) => parseComment(child))
+    .filter((comment): comment is RedditComment => comment !== null);
+
+  return { post, comments };
+}
+
+function parsePost(data: Record<string, unknown>, threadUrl?: string): RedditPost {
+  return {
+    title: getString(data.title, "Untitled Reddit Post"),
+    body: cleanBody(getString(data.selftext)),
+    author: getAuthor(data.author),
+    score: getNumber(data.score),
+    postedAt: formatUtcDate(data.created_utc),
+    threadUrl: getThreadUrl(data, threadUrl),
+  };
+}
+
+function parseComment(thing: unknown): RedditComment | null {
+  if (getKind(thing) !== "t1") {
+    return null;
+  }
+
+  const data = getDataObject(thing);
+  if (!data) {
+    return null;
+  }
+
+  return {
+    author: getAuthor(data.author),
+    body: cleanBody(getString(data.body)),
+    score: getNumber(data.score),
+    replies: getReplyChildren(data.replies)
+      .map((child) => parseComment(child))
+      .filter((comment): comment is RedditComment => comment !== null),
+  };
+}
+
+function formatComment(comment: RedditComment, depth: number): string[] {
+  const indent = "  ".repeat(depth);
+  const bodyIndent = `${indent}  `;
+  const lines = [`${indent}- u/${comment.author}`];
+
+  if (comment.body) {
+    const bodyLines = comment.body.split("\n");
+    lines.push(...bodyLines.map((line) => `${bodyIndent}${line}`));
+  }
+
+  lines.push(`${bodyIndent}${formatKarma(comment.score)}`);
+
+  for (const reply of comment.replies) {
+    lines.push(...formatComment(reply, depth + 1));
+  }
+
+  return lines;
+}
+
+function getListingChildren(value: unknown): unknown[] | null {
+  const data = getDataObject(value);
+  const children = data?.children;
+
+  return Array.isArray(children) ? children : null;
+}
+
+function getReplyChildren(value: unknown): unknown[] {
+  if (typeof value === "string") {
+    return [];
+  }
+
+  return getListingChildren(value) ?? [];
+}
+
+function getKind(value: unknown): string | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return typeof value.kind === "string" ? value.kind : null;
+}
+
+function getDataObject(value: unknown): Record<string, unknown> | null {
+  if (!isRecord(value) || !isRecord(value.data)) {
+    return null;
+  }
+
+  return value.data;
+}
+
+function getThreadUrl(data: Record<string, unknown>, threadUrl?: string): string {
+  if (threadUrl) {
+    return threadUrl;
+  }
+
+  const url = getString(data.url);
+  if (url) {
+    return url;
+  }
+
+  const permalink = getString(data.permalink);
+  if (permalink) {
+    return `https://www.reddit.com${permalink}`;
+  }
+
+  return "https://www.reddit.com";
+}
+
+function getAuthor(value: unknown): string {
+  const author = getString(value);
+  return author || "[deleted]";
+}
+
+function getString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
+function getNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function cleanBody(value: string): string {
+  return value.replace(/\r\n/g, "\n").trim();
+}
+
+function formatUtcDate(value: unknown): string {
+  const seconds = getNumber(value);
+
+  if (seconds <= 0) {
+    return "Unknown";
+  }
+
+  return new Date(seconds * 1000).toISOString();
+}
+
+function formatKarma(score: number): string {
+  return `↑ ${score} ↓`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}

@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { isRedditThreadUrl, toRedditJsonUrl } from "@/lib/reddit";
+import {
+  formatRedditThreadAsMarkdown,
+  isRedditThreadUrl,
+  toRedditJsonUrl,
+} from "@/lib/reddit";
 
 type PopupState = "loading" | "unsupported" | "error" | "success";
 
@@ -8,7 +12,7 @@ type PopupData = {
   activeUrl: string | null;
   jsonUrl: string | null;
   error: string | null;
-  payload: unknown | null;
+  markdown: string | null;
 };
 
 const initialData: PopupData = {
@@ -16,7 +20,7 @@ const initialData: PopupData = {
   activeUrl: null,
   jsonUrl: null,
   error: null,
-  payload: null,
+  markdown: null,
 };
 
 function App() {
@@ -39,7 +43,7 @@ function App() {
             activeUrl,
             jsonUrl: null,
             error: null,
-            payload: null,
+            markdown: null,
           });
           return;
         }
@@ -54,13 +58,14 @@ function App() {
         }
 
         const payload = await response.json();
+        const markdown = formatRedditThreadAsMarkdown(payload, activeUrl);
 
         setData({
           state: "success",
           activeUrl,
           jsonUrl,
           error: null,
-          payload,
+          markdown,
         });
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -77,8 +82,8 @@ function App() {
           error:
             error instanceof Error
               ? error.message
-              : "Failed to load Reddit thread JSON.",
-          payload: null,
+              : "Failed to load Reddit thread markdown.",
+          markdown: null,
         }));
       }
     }
@@ -92,10 +97,10 @@ function App() {
 
   return (
     <main className="w-80 h-80">
-      <div>
+      <div className="h-full p-3">
         {data.state === "loading" ? (
           <section>
-            Checking the active tab and loading Reddit thread JSON...
+            Checking the active tab and loading Reddit thread markdown...
           </section>
         ) : null}
 
@@ -106,9 +111,11 @@ function App() {
         {data.state === "error" ? <section>{data.error}</section> : null}
 
         {data.state === "success" ? (
-          <section>
-            <div>Raw Thread JSON</div>
-            <pre>{JSON.stringify(data.payload, null, 2)}</pre>
+          <section className="flex h-full flex-col gap-2">
+            <div>Thread Markdown</div>
+            <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words rounded border p-2 text-xs">
+              {data.markdown}
+            </pre>
           </section>
         ) : null}
       </div>
