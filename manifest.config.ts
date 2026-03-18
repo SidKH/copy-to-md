@@ -15,8 +15,13 @@ export default defineManifest({
     default_popup: 'src/popup/index.html',
   },
   permissions: [
+    'tabs',
     'sidePanel',
     'contentSettings',
+  ],
+  host_permissions: [
+    'https://www.reddit.com/*',
+    'https://reddit.com/*',
   ],
   content_scripts: [{
     js: ['src/content/main.tsx'],
