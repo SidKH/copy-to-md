@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './views/App.tsx'
+import '@/styles/globals.css'
 
 console.log('[CRXJS] Hello world from content script!')
 
