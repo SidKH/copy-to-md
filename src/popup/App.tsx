@@ -6,7 +6,7 @@ import {
   isRedditThreadUrl,
   toRedditJsonUrl,
 } from "@/lib/reddit";
-import { countTokens } from "@/lib/tokens";
+import { countTokens, formatTokenCount } from "@/lib/tokens";
 
 type PopupState = "loading" | "unsupported" | "error" | "success";
 
@@ -26,16 +26,9 @@ const initialData: PopupData = {
   markdown: null,
 };
 
-function formatScrambledTokenCount(value: number) {
-  return value.toLocaleString();
-}
-
 function App() {
   const [data, setData] = useState<PopupData>(initialData);
   const [copied, setCopied] = useState(false);
-  const [scrambledTokenCount, setScrambledTokenCount] = useState(() =>
-    formatScrambledTokenCount(1234),
-  );
   const markdownTokenCount = data.markdown ? countTokens(data.markdown) : null;
 
   useEffect(() => {
@@ -107,21 +100,6 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (data.state !== "loading") {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      const nextValue = Math.floor(1000 + Math.random() * 9000);
-      setScrambledTokenCount(formatScrambledTokenCount(nextValue));
-    }, 20);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [data.state]);
-
   async function handleCopy() {
     if (!data.markdown) {
       return;
@@ -138,18 +116,6 @@ function App() {
   return (
     <main className="relative h-full w-full overflow-hidden bg-transparent text-stone-950">
       <div className="animate-[popup-enter_300ms_cubic-bezier(0.16,1,0.3,1)] relative flex h-full items-center justify-center text-center">
-        {data.state === "loading" ? (
-          <section className="flex flex-col items-center justify-center gap-3">
-            <p className="text-sm text-muted-foreground tabular-nums">
-              {scrambledTokenCount} tokens
-            </p>
-            <Button size="lg" disabled>
-              <Copy />
-              Copy markdown
-            </Button>
-          </section>
-        ) : null}
-
         {data.state === "unsupported" ? (
           <section>This tab is not a supported Reddit thread page.</section>
         ) : null}
@@ -157,7 +123,7 @@ function App() {
         {data.state === "error" ? <section>{data.error}</section> : null}
 
         {data.state === "success" ? (
-          <section className="flex flex-col items-center justify-center gap-3">
+          <section className="flex flex-col items-center justify-center">
             {copied ? (
               <>
                 <p className="text-sm text-muted-foreground">
@@ -170,11 +136,14 @@ function App() {
             ) : (
               <>
                 {markdownTokenCount !== null ? (
-                  <p className="text-sm text-muted-foreground tabular-nums">
-                    {markdownTokenCount.toLocaleString()} tokens
+                  <p className="text-3xl font-bold text-primary tabular-nums">
+                    {formatTokenCount(markdownTokenCount)}
                   </p>
                 ) : null}
-                <Button size="lg" onClick={() => void handleCopy()}>
+                <p className="-mt-1 text-sm text-muted-foreground">
+                  tokens
+                </p>
+                <Button size="lg" onClick={() => void handleCopy()} className="mt-4">
                   <Copy />
                   Copy markdown
                 </Button>
