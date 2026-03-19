@@ -1,5 +1,3 @@
-export const TOKEN_ENCODING_NAME = "o200k_base";
-
 export function countTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
