@@ -142,7 +142,7 @@ function App() {
   }
 
   return (
-    <main className="relative h-80 w-80 overflow-hidden bg-stone-50 text-stone-950">
+    <main className="relative h-80 w-80 overflow-hidden bg-neutral-50 text-stone-950">
       <div className="pointer-events-none absolute inset-0">
         {decorativeLines.map((line) => (
           <span
