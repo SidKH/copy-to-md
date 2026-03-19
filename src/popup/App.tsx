@@ -136,7 +136,10 @@ function App() {
             ) : (
               <>
                 {markdownTokenCount !== null ? (
-                  <p className="text-3xl font-bold text-primary tabular-nums">
+                  <p className="text-3xl font-bold text-primary">
+                    <span className="-ml-[1ch] inline-block w-[1ch] text-neutral-300">
+                      ≈
+                    </span>
                     {formatTokenCount(markdownTokenCount)}
                   </p>
                 ) : null}
