@@ -132,14 +132,14 @@ function App() {
         {data.state === "success" ? (
           <section className="flex flex-col items-center justify-center">
             {copied ? (
-              <>
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-sm text-primary">
                   Copied to clipboard!
                 </p>
-                <Button size="lg" onClick={handleClose}>
+                <Button variant="outline" size="lg" onClick={handleClose}>
                   Close window
                 </Button>
-              </>
+              </div>
             ) : (
               <>
                 {markdownTokenCount !== null ? (
