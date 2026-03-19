@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy } from "lucide-react";
+import { Copy, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatRedditThreadAsMarkdown,
@@ -121,6 +121,13 @@ function App() {
         ) : null}
 
         {data.state === "error" ? <section>{data.error}</section> : null}
+
+        {data.state === "loading" ? (
+          <section className="flex items-center gap-2 text-sm text-muted-foreground">
+            <LoaderCircle className="size-3.5 animate-[spin_0.45s_linear_infinite]" />
+            <span>Fetching data</span>
+          </section>
+        ) : null}
 
         {data.state === "success" ? (
           <section className="flex flex-col items-center justify-center">
