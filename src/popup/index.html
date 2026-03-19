@@ -2,8 +2,82 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      html,
+      body,
+      #root {
+        width: 20rem;
+        height: 20rem;
+        min-width: 20rem;
+        min-height: 20rem;
+        margin: 0;
+      }
+
+      body {
+        position: relative;
+        overflow: hidden;
+        padding: 4rem;
+        box-sizing: border-box;
+        background: oklch(0.985 0 0);
+      }
+
+      #root {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .popup-background {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .popup-line {
+        position: absolute;
+        background: oklch(0.922 0 0);
+      }
+
+      .popup-line-v-left {
+        top: 0;
+        left: 14%;
+        width: 1px;
+        height: 100%;
+      }
+
+      .popup-line-v-right {
+        top: 0;
+        right: 14%;
+        width: 1px;
+        height: 100%;
+      }
+
+      .popup-line-h-top {
+        top: 14%;
+        left: 0;
+        width: 100%;
+        height: 1px;
+      }
+
+      .popup-line-h-bottom {
+        bottom: 14%;
+        left: 0;
+        width: 100%;
+        height: 1px;
+      }
+    </style>
   </head>
   <body>
+    <div class="popup-background" aria-hidden="true">
+      <span class="popup-line popup-line-v-left"></span>
+      <span class="popup-line popup-line-v-right"></span>
+      <span class="popup-line popup-line-h-top"></span>
+      <span class="popup-line popup-line-h-bottom"></span>
+    </div>
     <div id="root"></div>
     <script type="module" src="./main.tsx"></script>
   </body>

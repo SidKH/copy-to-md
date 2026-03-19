@@ -37,12 +37,6 @@ function App() {
     formatScrambledTokenCount(1234),
   );
   const markdownTokenCount = data.markdown ? countTokens(data.markdown) : null;
-  const decorativeLines = [
-    "left-[14%] top-0 h-full w-px",
-    "right-[14%] top-0 h-full w-px",
-    "left-0 top-[14%] h-px w-full",
-    "left-0 bottom-[14%] h-px w-full",
-  ];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -142,17 +136,8 @@ function App() {
   }
 
   return (
-    <main className="relative h-80 w-80 overflow-hidden bg-neutral-50 text-stone-950">
-      <div className="pointer-events-none absolute inset-0">
-        {decorativeLines.map((line) => (
-          <span
-            key={line}
-            className={`absolute bg-neutral-200 ${line}`}
-            aria-hidden="true"
-          />
-        ))}
-      </div>
-      <div className="relative flex h-full items-center justify-center p-3 text-center">
+    <main className="relative h-full w-full overflow-hidden bg-transparent text-stone-950">
+      <div className="animate-[popup-enter_300ms_cubic-bezier(0.16,1,0.3,1)] relative flex h-full items-center justify-center text-center">
         {data.state === "loading" ? (
           <section className="flex flex-col items-center justify-center gap-3">
             <p className="text-sm text-muted-foreground tabular-nums">
