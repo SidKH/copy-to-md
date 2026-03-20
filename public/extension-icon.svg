@@ -1,0 +1,18 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="128"
+  height="128"
+  viewBox="-5 -5 34 34"
+  fill="none"
+>
+  <g stroke="#171717" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+    <rect width="8" height="4" x="8" y="2" rx="1" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+  </g>
+  <!-- Official Markdown logotype “M” (arrow segment omitted); scaled to clipboard body -->
+  <path
+    fill="#171717"
+    transform="translate(7.5 9.35) scale(0.1125) translate(-30 -30)"
+    d="M30 98V30h20l20 25 20-25h20v68H90V59L70 84 50 59v39z"
+  />
+</svg>
