@@ -6,7 +6,7 @@ import {
   isRedditThreadUrl,
   toRedditJsonUrl,
 } from "@/lib/reddit";
-import { countTokens, formatTokenCount } from "@/lib/tokens";
+import { countTokens, formatTokenCount, tokenCountPrefixSymbol } from "@/lib/tokens";
 
 type PopupState = "loading" | "unsupported" | "error" | "success";
 
@@ -143,11 +143,15 @@ function App() {
             ) : (
               <>
                 {markdownTokenCount !== null ? (
-                  <p className="text-3xl font-bold text-primary">
-                    <span className="-ml-[1ch] inline-block w-[1ch] text-neutral-300">
-                      ≈
+                  <p className="flex justify-center">
+                    <span className="relative inline-block text-3xl">
+                      <span className="absolute right-full top-0 pr-1 font-bold text-neutral-300">
+                        {tokenCountPrefixSymbol(markdownTokenCount)}
+                      </span>
+                      <span className="font-bold text-primary">
+                        {formatTokenCount(markdownTokenCount)}
+                      </span>
                     </span>
-                    {formatTokenCount(markdownTokenCount)}
                   </p>
                 ) : null}
                 <p className="-mt-1 text-sm text-muted-foreground">
