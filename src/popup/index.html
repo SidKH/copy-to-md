@@ -37,6 +37,12 @@
         pointer-events: none;
       }
 
+      .popup-inner-fill {
+        position: absolute;
+        inset: 14%;
+        background: oklch(1 0 0);
+      }
+
       .popup-line {
         position: absolute;
         background: oklch(0.922 0 0);
@@ -69,10 +75,37 @@
         width: 100%;
         height: 1px;
       }
+
+      .popup-hatch {
+        position: absolute;
+        width: 14%;
+        height: 14%;
+        pointer-events: none;
+        background-image: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 2px,
+          oklch(0.922 0 0) 2px,
+          oklch(0.922 0 0) 3px
+        );
+      }
+
+      .popup-hatch-corner-tl {
+        top: 0;
+        left: 0;
+      }
+
+      .popup-hatch-corner-br {
+        bottom: 0;
+        right: 0;
+      }
     </style>
   </head>
   <body>
     <div class="popup-background" aria-hidden="true">
+      <span class="popup-inner-fill"></span>
+      <span class="popup-hatch popup-hatch-corner-tl"></span>
+      <span class="popup-hatch popup-hatch-corner-br"></span>
       <span class="popup-line popup-line-v-left"></span>
       <span class="popup-line popup-line-v-right"></span>
       <span class="popup-line popup-line-h-top"></span>
