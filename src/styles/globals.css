@@ -144,8 +144,4 @@
   html {
     @apply font-sans;
   }
-  html.dev {
-    border: 1px solid var(--border) !important;
-    margin: 120px auto !important;
-  }
 }
