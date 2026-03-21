@@ -68,8 +68,6 @@ export function formatRedditThreadAsMarkdown(
     parsedThread.post.threadUrl,
     "",
     parsedThread.post.postedAt,
-    "",
-    `u/${parsedThread.post.author}`,
   ];
 
   if (parsedThread.post.body) {
@@ -153,7 +151,7 @@ function parseComment(thing: unknown): RedditComment | null {
 function formatComment(comment: RedditComment, depth: number): string[] {
   const indent = "  ".repeat(depth);
   const body = comment.body ? comment.body.replace(/\s*\n+\s*/g, " ") : "";
-  const parts = [`u/${comment.author}`];
+  const parts: string[] = [];
 
   if (body) {
     parts.push(body);
@@ -161,7 +159,7 @@ function formatComment(comment: RedditComment, depth: number): string[] {
 
   parts.push(formatKarma(comment.score));
 
-  const lines = [`${indent}- ${parts.join(" -- ")}`];
+  const lines = [`${indent}- ${parts.join(" ")}`];
 
   for (const reply of comment.replies) {
     lines.push(...formatComment(reply, depth + 1));

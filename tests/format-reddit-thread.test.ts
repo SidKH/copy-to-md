@@ -37,4 +37,15 @@ describe("Reddit markdown formatter", () => {
 
     expect(markdown).toBe(expected);
   });
+
+  it("does not include author names in markdown", () => {
+    const payload = readFixturePayload("thread-with-comments.json");
+    const threadUrl =
+      "https://www.reddit.com/r/example/comments/xyz789/comments-thread/";
+    const markdown = formatRedditThreadAsMarkdown(payload, threadUrl);
+
+    expect(markdown).not.toContain("u/postauthor");
+    expect(markdown).not.toContain("u/alice");
+    expect(markdown).not.toContain("u/bob");
+  });
 });
