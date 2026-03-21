@@ -3,6 +3,7 @@
   "displayName": "Copy to md",
   "type": "module",
   "version": "1.0.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "vite",
