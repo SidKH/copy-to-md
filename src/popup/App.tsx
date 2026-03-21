@@ -170,7 +170,7 @@ function App() {
             <p className="-mt-1 text-sm text-muted-foreground">tokens</p>
             <div className="mt-4 flex min-h-9 w-full max-w-[min(100%,280px)] flex-col items-center justify-center">
               {copied ? (
-                <div className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-neutral-200 bg-neutral-100 px-3 text-sm font-medium text-primary">
+                <div className="copied-to-clipboard-in inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-neutral-200 px-3 text-sm font-medium text-primary">
                   <Check className="size-4 shrink-0" aria-hidden />
                   Copied to clipboard
                 </div>
