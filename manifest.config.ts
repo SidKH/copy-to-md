@@ -1,10 +1,12 @@
 import { defineManifest } from '@crxjs/vite-plugin'
 import pkg from './package.json'
 
+const pkgJson = pkg as typeof pkg & { displayName?: string }
+
 export default defineManifest({
   manifest_version: 3,
-  name: pkg.name,
-  version: pkg.version,
+  name: pkgJson.displayName ?? pkgJson.name,
+  version: pkgJson.version,
   icons: {
     16: 'public/icon-16.png',
     32: 'public/icon-32.png',
