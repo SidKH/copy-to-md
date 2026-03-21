@@ -1,0 +1,68 @@
+[
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "title": "Post",
+            "selftext": "",
+            "author": "op",
+            "score": 1,
+            "created_utc": 1704067200
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t1",
+          "data": {
+            "author": "[deleted]",
+            "body": "[deleted]",
+            "score": 1,
+            "replies": {
+              "kind": "Listing",
+              "data": {
+                "children": [
+                  {
+                    "kind": "t1",
+                    "data": {
+                      "author": "bob",
+                      "body": "Reply under deleted parent.",
+                      "score": 2,
+                      "replies": ""
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "author": "[deleted]",
+            "body": "My text survived.",
+            "score": 3,
+            "replies": ""
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "author": "gone_user",
+            "body": "[deleted]",
+            "score": 99,
+            "replies": ""
+          }
+        }
+      ]
+    }
+  }
+]

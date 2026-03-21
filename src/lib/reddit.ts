@@ -52,6 +52,8 @@ type RedditComment = {
   replies: RedditComment[];
 };
 
+const DELETED_COMMENT_PLACEHOLDER = "[deleted comment]";
+
 export function formatRedditThreadAsMarkdown(
   payload: unknown,
   threadUrl?: string,
@@ -110,9 +112,7 @@ function parseRedditThread(
   }
 
   const post = parsePost(postData, threadUrl);
-  const comments = commentChildren
-    .map((child) => parseComment(child))
-    .filter((comment): comment is RedditComment => comment !== null);
+  const comments = commentChildren.flatMap((child) => parseComment(child));
 
   return { post, comments };
 }
@@ -128,24 +128,48 @@ function parsePost(data: Record<string, unknown>, threadUrl?: string): RedditPos
   };
 }
 
-function parseComment(thing: unknown): RedditComment | null {
+function parseComment(thing: unknown): RedditComment[] {
   if (getKind(thing) !== "t1") {
-    return null;
+    return [];
   }
 
   const data = getDataObject(thing);
   if (!data) {
-    return null;
+    return [];
   }
 
-  return {
-    author: getAuthor(data.author),
-    body: cleanBody(getString(data.body)),
-    score: getNumber(data.score),
-    replies: getReplyChildren(data.replies)
-      .map((child) => parseComment(child))
-      .filter((comment): comment is RedditComment => comment !== null),
-  };
+  const body = cleanBody(getString(data.body));
+  const nestedReplies = getReplyChildren(data.replies).flatMap((child) =>
+    parseComment(child),
+  );
+
+  if (isDeletedCommentBody(body)) {
+    if (nestedReplies.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        author: getAuthor(data.author),
+        body: DELETED_COMMENT_PLACEHOLDER,
+        score: getNumber(data.score),
+        replies: nestedReplies,
+      },
+    ];
+  }
+
+  return [
+    {
+      author: getAuthor(data.author),
+      body,
+      score: getNumber(data.score),
+      replies: nestedReplies,
+    },
+  ];
+}
+
+function isDeletedCommentBody(body: string): boolean {
+  return body === "[deleted]";
 }
 
 function formatComment(comment: RedditComment, depth: number): string[] {

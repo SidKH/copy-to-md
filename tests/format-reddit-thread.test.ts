@@ -48,4 +48,14 @@ describe("Reddit markdown formatter", () => {
     expect(markdown).not.toContain("u/alice");
     expect(markdown).not.toContain("u/bob");
   });
+
+  it("shows placeholder for deleted comments with replies, omits leaf deleted comments", () => {
+    const payload = readFixturePayload("deleted-comments-thread.json");
+    const threadUrl =
+      "https://www.reddit.com/r/example/comments/del123/deleted-case/";
+    const markdown = formatRedditThreadAsMarkdown(payload, threadUrl);
+    const expected = readExpected("deleted-comments-thread.expected.md");
+
+    expect(markdown).toBe(expected);
+  });
 });
