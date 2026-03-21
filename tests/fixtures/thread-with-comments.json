@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "title": "Thread with comments",
+            "selftext": "",
+            "author": "postauthor",
+            "score": 1,
+            "created_utc": 1704067200
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t1",
+          "data": {
+            "author": "alice",
+            "body": "Top comment.",
+            "score": 5,
+            "replies": {
+              "kind": "Listing",
+              "data": {
+                "children": [
+                  {
+                    "kind": "t1",
+                    "data": {
+                      "author": "bob",
+                      "body": "Nested reply.",
+                      "score": 3,
+                      "replies": ""
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

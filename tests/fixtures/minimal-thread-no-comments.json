@@ -1,0 +1,25 @@
+[
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "title": "Thread title",
+            "selftext": "Post body line one.",
+            "author": "testauthor",
+            "score": 42,
+            "created_utc": 1704067200
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "Listing",
+    "data": {
+      "children": []
+    }
+  }
+]
