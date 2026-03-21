@@ -35,7 +35,6 @@ npm run build
 ## Project Structure
 
 - `src/popup/` - Extension popup UI
-- `src/content/` - Content scripts
 - `manifest.config.ts` - Chrome extension manifest configuration
 
 ## Documentation
@@ -48,5 +47,4 @@ npm run build
 
 - Use `manifest.config.ts` to configure your extension
 - The CRXJS plugin automatically handles manifest generation
-- Content scripts should be placed in `src/content/`
 - Popup UI should be placed in `src/popup/`
