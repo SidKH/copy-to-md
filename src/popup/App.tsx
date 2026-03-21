@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy, CopyCheck, LoaderCircle } from "lucide-react";
+import { Copy, CopyCheck, LoaderCircle, MessageSquareOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatRedditThreadAsMarkdown,
@@ -141,7 +141,17 @@ function App() {
     <main className="relative h-full w-full overflow-hidden bg-transparent text-stone-950">
       <div className="animate-[popup-enter_300ms_cubic-bezier(0.16,1,0.3,1)] relative flex h-full items-center justify-center text-center">
         {data.state === "unsupported" ? (
-          <section>This tab is not a supported Reddit thread page.</section>
+          <section className="flex max-w-[min(100%,280px)] flex-col items-center gap-4 px-4">
+            <div
+              className="flex size-14 shrink-0 items-center justify-center rounded-full border border-border"
+              aria-hidden
+            >
+              <MessageSquareOff className="size-5 text-foreground" />
+            </div>
+            <p className="text-xs text-foreground">
+              This tab is not a supported Reddit thread page
+            </p>
+          </section>
         ) : null}
 
         {data.state === "error" ? <section>{data.error}</section> : null}
