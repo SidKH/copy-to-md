@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy, LoaderCircle } from "lucide-react";
+import { Check, Copy, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatRedditThreadAsMarkdown,
@@ -155,38 +155,40 @@ function App() {
 
         {data.state === "success" ? (
           <section className="flex flex-col items-center justify-center">
-            {copied ? (
-              <div className="flex flex-col items-center gap-4">
-                <p className="text-sm text-primary">
-                  Copied to clipboard!
-                </p>
-                <Button variant="outline" size="lg" onClick={handleClose}>
-                  Close window
-                </Button>
-              </div>
-            ) : (
-              <>
-                {markdownTokenCount !== null ? (
-                  <p className="flex justify-center">
-                    <span className="relative inline-block text-3xl">
-                      <span className="absolute right-full top-0 pr-1 font-bold text-neutral-300">
-                        {tokenCountPrefixSymbol(markdownTokenCount)}
-                      </span>
-                      <span className="font-bold text-primary">
-                        {formatTokenCount(markdownTokenCount)}
-                      </span>
-                    </span>
-                  </p>
-                ) : null}
-                <p className="-mt-1 text-sm text-muted-foreground">
-                  tokens
-                </p>
-                <Button size="lg" onClick={() => void handleCopy()} className="mt-4">
+            {markdownTokenCount !== null ? (
+              <p className="flex justify-center">
+                <span className="relative inline-block text-3xl">
+                  <span className="absolute right-full top-0 pr-1 font-bold text-neutral-300">
+                    {tokenCountPrefixSymbol(markdownTokenCount)}
+                  </span>
+                  <span className="font-bold text-primary">
+                    {formatTokenCount(markdownTokenCount)}
+                  </span>
+                </span>
+              </p>
+            ) : null}
+            <p className="-mt-1 text-sm text-muted-foreground">tokens</p>
+            <div className="mt-4 flex min-h-9 w-full max-w-[min(100%,280px)] flex-col items-center justify-center">
+              {copied ? (
+                <div className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-neutral-200 bg-neutral-100 px-3 text-sm font-medium text-primary">
+                  <Check className="size-4 shrink-0" aria-hidden />
+                  Copied to clipboard
+                </div>
+              ) : (
+                <Button size="lg" onClick={() => void handleCopy()}>
                   <Copy />
                   Copy markdown
                 </Button>
-              </>
-            )}
+              )}
+            </div>
+            <Button
+              variant="link"
+              size="sm"
+              className="mt-2 h-auto p-0 text-muted-foreground hover:text-muted-foreground"
+              onClick={handleClose}
+            >
+              Close popup
+            </Button>
           </section>
         ) : null}
       </div>
