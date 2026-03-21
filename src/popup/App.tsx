@@ -33,9 +33,33 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController();
+    const params = new URLSearchParams(window.location.search);
+    const useFixture = params.get("fixture") === "1";
+    const devLoading = params.get("devLoading") === "1";
 
     async function loadThread() {
       try {
+        if (import.meta.env.DEV && devLoading) {
+          return;
+        }
+
+        if (import.meta.env.DEV && useFixture) {
+          const { default: payload } = await import(
+            "../../fixtures/reddit-thread.json"
+          );
+          const syntheticUrl =
+            "https://www.reddit.com/r/example/comments/fixture123/dev-fixture/";
+          const markdown = formatRedditThreadAsMarkdown(payload, syntheticUrl);
+          setData({
+            state: "success",
+            activeUrl: syntheticUrl,
+            jsonUrl: toRedditJsonUrl(syntheticUrl),
+            error: null,
+            markdown,
+          });
+          return;
+        }
+
         const [tab] = await chrome.tabs.query({
           active: true,
           currentWindow: true,
