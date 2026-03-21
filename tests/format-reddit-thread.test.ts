@@ -58,4 +58,14 @@ describe("Reddit markdown formatter", () => {
 
     expect(markdown).toBe(expected);
   });
+
+  it("renders link image posts with image markdown above selftext caption", () => {
+    const payload = readFixturePayload("image-submission-thread.json");
+    const threadUrl =
+      "https://www.reddit.com/r/codex/comments/1rwqy9x/this_is_insane/";
+    const markdown = formatRedditThreadAsMarkdown(payload, threadUrl);
+    const expected = readExpected("image-submission-thread.expected.md");
+
+    expect(markdown).toBe(expected);
+  });
 });

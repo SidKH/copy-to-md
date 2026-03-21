@@ -39,6 +39,7 @@ export function toRedditJsonUrl(url: string): string {
 type RedditPost = {
   title: string;
   body: string;
+  imageUrl: string | null;
   author: string;
   score: number;
   postedAt: string;
@@ -71,6 +72,10 @@ export function formatRedditThreadAsMarkdown(
     "",
     parsedThread.post.postedAt,
   ];
+
+  if (parsedThread.post.imageUrl) {
+    lines.push("", `![preview image](${parsedThread.post.imageUrl})`);
+  }
 
   if (parsedThread.post.body) {
     lines.push("", parsedThread.post.body);
@@ -118,14 +123,30 @@ function parseRedditThread(
 }
 
 function parsePost(data: Record<string, unknown>, threadUrl?: string): RedditPost {
+  const imageUrl = getSubmissionImageUrl(data);
+
   return {
     title: getString(data.title, "Untitled Reddit Post"),
     body: cleanBody(getString(data.selftext)),
+    imageUrl,
     author: getAuthor(data.author),
     score: getNumber(data.score),
     postedAt: formatUtcDate(data.created_utc),
     threadUrl: getThreadUrl(data, threadUrl),
   };
+}
+
+function getSubmissionImageUrl(data: Record<string, unknown>): string | null {
+  if (data.is_self === true) {
+    return null;
+  }
+
+  if (getString(data.post_hint) !== "image") {
+    return null;
+  }
+
+  const direct = getString(data.url) || getString(data.url_overridden_by_dest);
+  return direct || null;
 }
 
 function parseComment(thing: unknown): RedditComment[] {
