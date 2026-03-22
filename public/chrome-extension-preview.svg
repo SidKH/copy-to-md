@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+  <defs>
+    <style type="text/css">
+      @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Geist+Mono:wght@100..900&amp;display=swap');
+    </style>
+    <linearGradient id="redditBar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff4500"/>
+      <stop offset="100%" stop-color="#ff6a33"/>
+    </linearGradient>
+    <linearGradient id="titleGradient" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#52525b"/>
+    </linearGradient>
+    <clipPath id="panelClip" clipPathUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="1136" height="560"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1280" height="800" fill="#fafafa"/>
+
+  <g transform="translate(0, 56)">
+    <text x="640" y="64" text-anchor="middle" font-family="Geist, sans-serif" font-size="48" font-weight="700" fill="url(#titleGradient)" letter-spacing="-0.02em">Reddit &#8594; Markdown</text>
+    <text x="640" y="112" text-anchor="middle" font-family="Geist, sans-serif" font-size="24" fill="#52525b">Copy Reddit threads as Markdown — title, URL, UTC date, scores, nested comments</text>
+
+    <!-- Single split panel: Reddit | Markdown (bottom flush with canvas y=800) -->
+    <g transform="translate(72, 184)">
+      <g clip-path="url(#panelClip)">
+        <!-- Base + right column tint -->
+        <rect width="1136" height="560" fill="#fafafa"/>
+        <rect x="568" width="568" height="560" fill="#f4f4f5"/>
+        <!-- Center divider -->
+        <line x1="568" y1="0" x2="568" y2="560" stroke="#e4e4e7" stroke-width="1"/>
+        <!-- Left: Reddit header -->
+        <rect width="568" height="40" fill="url(#redditBar)"/>
+        <text x="284" y="20" text-anchor="middle" dominant-baseline="middle" font-family="Geist, sans-serif" font-size="13" font-weight="700" fill="#ffffff">reddit</text>
+        <!-- Right: light editor chrome -->
+        <rect x="568" width="568" height="40" fill="#e4e4e7"/>
+        <line x1="568" y1="40" x2="1136" y2="40" stroke="#e4e4e7" stroke-width="1"/>
+        <text x="852" y="20" text-anchor="middle" dominant-baseline="middle" font-family="'Geist Mono', monospace" font-size="11" fill="#52525b">thread.md</text>
+      </g>
+      <!-- Panel border: top + sides only (no bottom) -->
+      <line x1="0" y1="0" x2="1136" y2="0" stroke="#d4d4d8" stroke-width="1"/>
+      <line x1="0" y1="0" x2="0" y2="560" stroke="#d4d4d8" stroke-width="1"/>
+      <line x1="1136" y1="0" x2="1136" y2="560" stroke="#d4d4d8" stroke-width="1"/>
+      <!-- Left: Reddit body (unclipped text renders above; coordinates in panel space) -->
+      <text x="24" y="76" font-family="Geist, sans-serif" font-size="12" font-weight="600" fill="#71717a">r/programming</text>
+      <text x="24" y="96" font-family="Geist, sans-serif" font-size="11" fill="#a1a1aa">Posted by u/devreader &#183; 3h ago</text>
+      <text x="24" y="140" font-family="Geist, sans-serif" font-size="22" font-weight="700" fill="#27272a">Tips for reading long threads on mobile</text>
+      <text x="24" y="184" font-family="Geist, sans-serif" font-size="14" fill="#3f3f46">I save posts and export them as notes. A clean</text>
+      <text x="24" y="208" font-family="Geist, sans-serif" font-size="14" fill="#3f3f46">markdown copy makes it easy to drop into Obsidian</text>
+      <text x="24" y="232" font-family="Geist, sans-serif" font-size="14" fill="#3f3f46">or any editor without losing structure.</text>
+      <text x="24" y="260" font-family="Geist, sans-serif" font-size="11" font-weight="600" fill="#71717a">Comments</text>
+      <text x="24" y="282" font-family="Geist, sans-serif" font-size="13" fill="#3f3f46">Great thread&#8212;saved for later. &#8593; 89</text>
+      <text x="40" y="304" font-family="Geist, sans-serif" font-size="13" fill="#3f3f46">Same here, especially on mobile. &#8593; 34</text>
+      <text x="56" y="326" font-family="Geist, sans-serif" font-size="12" fill="#52525b">Third level: reader mode helps. &#8593; 3</text>
+      <text x="40" y="348" font-family="Geist, sans-serif" font-size="13" fill="#3f3f46">I collapse deep branches first. &#8593; 12</text>
+      <text x="24" y="370" font-family="Geist, sans-serif" font-size="13" fill="#3f3f46">Second top-level question about export&#8230; &#8593; 45</text>
+      <g transform="translate(24, 400)">
+        <rect width="72" height="88" rx="8" fill="#fafafa" stroke="#e4e4e7"/>
+        <text x="36" y="28" text-anchor="middle" font-family="Geist, sans-serif" font-size="18" fill="#71717a">&#9650;</text>
+        <text x="36" y="52" text-anchor="middle" font-family="Geist, sans-serif" font-size="13" font-weight="600" fill="#52525b">1234</text>
+        <text x="36" y="78" text-anchor="middle" font-family="Geist, sans-serif" font-size="18" fill="#71717a">&#9660;</text>
+      </g>
+      <text x="120" y="448" font-family="Geist, sans-serif" font-size="12" fill="#a1a1aa">142 comments &#183; Share &#183; Save</text>
+
+      <!-- Right: Markdown — matches formatRedditThreadAsMarkdown output -->
+      <text x="592" y="72" font-family="'Geist Mono', monospace" font-size="15" font-weight="600" fill="#18181b"># Tips for reading long threads on mobile</text>
+      <text x="592" y="100" font-family="'Geist Mono', monospace" font-size="11" fill="#0369a1">https://www.reddit.com/r/programming/comments/abc123/tips/</text>
+      <text x="592" y="132" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">January 15, 2020 at 4:30 PM</text>
+      <text x="592" y="168" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">I save posts and export them as notes. A clean</text>
+      <text x="592" y="190" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">markdown copy makes it easy to drop into Obsidian</text>
+      <text x="592" y="212" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">or any editor without losing structure.</text>
+      <text x="592" y="248" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">&#8593; 1234 &#8595;</text>
+      <text x="592" y="284" font-family="'Geist Mono', monospace" font-size="14" font-weight="600" fill="#18181b">## Comments</text>
+      <text x="592" y="308" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">- Great thread&#8212;saved for later. &#8593; 89 &#8595;</text>
+      <text x="592" y="330" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">  - Same here, especially on mobile. &#8593; 34 &#8595;</text>
+      <text x="592" y="352" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">    - Third level: reader mode helps. &#8593; 3 &#8595;</text>
+      <text x="592" y="374" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">  - I collapse deep branches first. &#8593; 12 &#8595;</text>
+      <text x="592" y="396" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">- Second top-level question about export. &#8593; 45 &#8595;</text>
+      <text x="592" y="418" font-family="'Geist Mono', monospace" font-size="13" fill="#3f3f46">  - Plain Markdown is enough for me. &#8593; 2 &#8595;</text>
+    </g>
+  </g>
+</svg>
