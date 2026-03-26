@@ -1,128 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Copy, CopyCheck, LoaderCircle, MessageSquareOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  formatRedditThreadAsMarkdown,
-  isRedditThreadUrl,
-  toRedditJsonUrl,
-} from "@/lib/reddit";
 import { countTokens, formatTokenCount, tokenCountPrefixSymbol } from "@/lib/tokens";
-
-type PopupState = "loading" | "unsupported" | "error" | "success";
-
-type PopupData = {
-  state: PopupState;
-  activeUrl: string | null;
-  jsonUrl: string | null;
-  error: string | null;
-  markdown: string | null;
-};
-
-const initialData: PopupData = {
-  state: "loading",
-  activeUrl: null,
-  jsonUrl: null,
-  error: null,
-  markdown: null,
-};
+import { useThreadData } from "@/hooks/useThreadData";
 
 function App() {
-  const [data, setData] = useState<PopupData>(initialData);
+  const data = useThreadData();
   const [copied, setCopied] = useState(false);
   const markdownTokenCount = data.markdown ? countTokens(data.markdown) : null;
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const params = new URLSearchParams(window.location.search);
-    const useFixture = params.get("fixture") === "1";
-    const devLoading = params.get("devLoading") === "1";
-
-    async function loadThread() {
-      try {
-        if (import.meta.env.DEV && devLoading) {
-          return;
-        }
-
-        if (import.meta.env.DEV && useFixture) {
-          const { default: payload } = await import(
-            "../../fixtures/reddit-thread.json"
-          );
-          const syntheticUrl =
-            "https://www.reddit.com/r/example/comments/fixture123/dev-fixture/";
-          const markdown = formatRedditThreadAsMarkdown(payload, syntheticUrl);
-          setData({
-            state: "success",
-            activeUrl: syntheticUrl,
-            jsonUrl: toRedditJsonUrl(syntheticUrl),
-            error: null,
-            markdown,
-          });
-          return;
-        }
-
-        const [tab] = await chrome.tabs.query({
-          active: true,
-          currentWindow: true,
-        });
-        const activeUrl = tab?.url ?? null;
-
-        if (!activeUrl || !isRedditThreadUrl(activeUrl)) {
-          setData({
-            state: "unsupported",
-            activeUrl,
-            jsonUrl: null,
-            error: null,
-            markdown: null,
-          });
-          return;
-        }
-
-        const jsonUrl = toRedditJsonUrl(activeUrl);
-        const response = await fetch(jsonUrl, { signal: controller.signal });
-
-        if (!response.ok) {
-          throw new Error(
-            `Reddit returned ${response.status} ${response.statusText}`.trim(),
-          );
-        }
-
-        const payload = await response.json();
-        const markdown = formatRedditThreadAsMarkdown(payload, activeUrl);
-
-        setData({
-          state: "success",
-          activeUrl,
-          jsonUrl,
-          error: null,
-          markdown,
-        });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-
-        setData((current) => ({
-          state: "error",
-          activeUrl: current.activeUrl,
-          jsonUrl:
-            current.activeUrl && isRedditThreadUrl(current.activeUrl)
-              ? toRedditJsonUrl(current.activeUrl)
-              : current.jsonUrl,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Failed to load Reddit thread markdown.",
-          markdown: null,
-        }));
-      }
-    }
-
-    void loadThread();
-
-    return () => {
-      controller.abort();
-    };
-  }, []);
 
   async function handleCopy() {
     if (!data.markdown) {
