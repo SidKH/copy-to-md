@@ -1,12 +1,12 @@
-# Thread title
+# Hello world
 
 https://www.reddit.com/r/example/comments/abc123/hello/
 
-January 1, 2024 at 12:00 AM
+January 1, 2025 at 11:30 PM
 
-Post body line one.
+Body text
 
-↑ 42 ↓
+↑ 123 ↓
 
 ## Comments
 

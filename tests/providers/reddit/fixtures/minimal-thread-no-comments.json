@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "title": "Hello world",
+            "selftext": "Body text",
+            "author": "u/postauthor",
+            "score": 123,
+            "created_utc": 1735774200,
+            "permalink": "/r/example/comments/abc123/hello/"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "Listing",
+    "data": {
+      "children": []
+    }
+  }
+]

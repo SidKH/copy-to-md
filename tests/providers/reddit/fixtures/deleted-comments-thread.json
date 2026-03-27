@@ -6,11 +6,12 @@
         {
           "kind": "t3",
           "data": {
-            "title": "Thread with comments",
+            "title": "Deleted comments case",
             "selftext": "",
-            "author": "postauthor",
-            "score": 1,
-            "created_utc": 1704067200
+            "author": "u/postauthor",
+            "score": 9,
+            "created_utc": 1735774200,
+            "permalink": "/r/example/comments/del123/deleted-case/"
           }
         }
       ]
@@ -23,9 +24,18 @@
         {
           "kind": "t1",
           "data": {
-            "author": "alice",
-            "body": "Top comment.",
-            "score": 5,
+            "author": "u/deleted",
+            "body": "[deleted]",
+            "score": 0,
+            "replies": ""
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "author": "u/deleted",
+            "body": "[deleted]",
+            "score": 0,
             "replies": {
               "kind": "Listing",
               "data": {
@@ -33,9 +43,9 @@
                   {
                     "kind": "t1",
                     "data": {
-                      "author": "bob",
-                      "body": "Nested reply.",
-                      "score": 3,
+                      "author": "u/bob",
+                      "body": "Reply under deleted comment",
+                      "score": 4,
                       "replies": ""
                     }
                   }

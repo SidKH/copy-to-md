@@ -1,7 +1,13 @@
 {
   "extends": "./tsconfig.app.json",
-  "include": ["tests/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts"],
   "compilerOptions": {
-    "types": ["node", "vitest/globals"]
+    "types": [
+      "vite/client",
+      "@crxjs/vite-plugin/client",
+      "chrome",
+      "node",
+      "vitest/globals"
+    ]
   }
 }

@@ -7,6 +7,10 @@ export default defineManifest({
   manifest_version: 3,
   name: pkgJson.displayName ?? pkgJson.name,
   version: pkgJson.version,
+  background: {
+    service_worker: "src/background/index.ts",
+    type: "module",
+  },
   icons: {
     16: 'public/icon-16.png',
     32: 'public/icon-32.png',

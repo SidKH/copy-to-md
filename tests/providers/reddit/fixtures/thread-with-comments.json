@@ -6,11 +6,12 @@
         {
           "kind": "t3",
           "data": {
-            "title": "Post",
-            "selftext": "",
-            "author": "op",
-            "score": 1,
-            "created_utc": 1704067200
+            "title": "Discussion thread",
+            "selftext": "Some context from the post body.",
+            "author": "u/postauthor",
+            "score": 456,
+            "created_utc": 1735774200,
+            "permalink": "/r/example/comments/xyz789/comments-thread/"
           }
         }
       ]
@@ -23,9 +24,9 @@
         {
           "kind": "t1",
           "data": {
-            "author": "[deleted]",
-            "body": "[deleted]",
-            "score": 1,
+            "author": "u/alice",
+            "body": "Top level comment",
+            "score": 10,
             "replies": {
               "kind": "Listing",
               "data": {
@@ -33,9 +34,9 @@
                   {
                     "kind": "t1",
                     "data": {
-                      "author": "bob",
-                      "body": "Reply under deleted parent.",
-                      "score": 2,
+                      "author": "u/bob",
+                      "body": "Nested reply",
+                      "score": 3,
                       "replies": ""
                     }
                   }
@@ -47,18 +48,9 @@
         {
           "kind": "t1",
           "data": {
-            "author": "[deleted]",
-            "body": "My text survived.",
-            "score": 3,
-            "replies": ""
-          }
-        },
-        {
-          "kind": "t1",
-          "data": {
-            "author": "gone_user",
-            "body": "[deleted]",
-            "score": 99,
+            "author": "u/charlie",
+            "body": "Second top level comment",
+            "score": 7,
             "replies": ""
           }
         }

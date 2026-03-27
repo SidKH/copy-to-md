@@ -2,19 +2,20 @@ import { useState } from "react";
 import { Copy, CopyCheck, LoaderCircle, MessageSquareOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { countTokens, formatTokenCount, tokenCountPrefixSymbol } from "@/lib/tokens";
-import { useThreadData } from "@/hooks/useThreadData";
+import { useActiveCapture } from "@/popup/useActiveCapture";
 
 function App() {
-  const data = useThreadData();
+  const data = useActiveCapture();
   const [copied, setCopied] = useState(false);
-  const markdownTokenCount = data.markdown ? countTokens(data.markdown) : null;
+  const markdown = data.state === "success" ? data.result.markdown : null;
+  const markdownTokenCount = markdown ? countTokens(markdown) : null;
 
   async function handleCopy() {
-    if (!data.markdown) {
+    if (!markdown) {
       return;
     }
 
-    await navigator.clipboard.writeText(data.markdown);
+    await navigator.clipboard.writeText(markdown);
     setCopied(true);
   }
 
@@ -34,7 +35,7 @@ function App() {
               <MessageSquareOff className="size-5 text-foreground" />
             </div>
             <p className="text-xs text-foreground">
-              This tab is not a supported Reddit thread page
+              This tab is not a supported post page
             </p>
           </section>
         ) : null}
