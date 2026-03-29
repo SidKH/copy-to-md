@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getActiveCapture } from "@/background/index";
+import { createCaptureRegistry } from "@/core/registry";
+import { createXCapture } from "@/providers/x";
 import type { CaptureRegistry } from "@/core/registry";
 
 type ChromeMock = {
@@ -15,7 +17,7 @@ type ChromeMock = {
 };
 
 type CaptureRegistryMock = CaptureRegistry & {
-  tryCapture: ReturnType<typeof vi.fn>;
+  tryCapture: ReturnType<typeof vi.fn<CaptureRegistry["tryCapture"]>>;
 };
 
 function createChromeMock(): ChromeMock {
@@ -33,7 +35,7 @@ function createChromeMock(): ChromeMock {
 
 function createCaptureRegistryMock(): CaptureRegistryMock {
   return {
-    tryCapture: vi.fn(),
+    tryCapture: vi.fn<CaptureRegistry["tryCapture"]>(),
   };
 }
 
@@ -112,6 +114,51 @@ describe("getActiveCapture", () => {
     await expect(getActiveCapture(registryMock)).resolves.toEqual({
       state: "error",
       error: "Reddit returned 403 Forbidden",
+    });
+  });
+
+  it("routes supported x status pages through the provider boundary", async () => {
+    const boundary = {
+      captureThread: vi.fn().mockResolvedValue({
+        markdown: "# Thread",
+        sourceUrl: "https://x.com/example/status/1234567890",
+      }),
+    };
+
+    chromeMock.tabs.query.mockResolvedValue([
+      {
+        id: 11,
+        url: "https://x.com/example/status/1234567890",
+      },
+    ]);
+
+    await expect(
+      getActiveCapture(createCaptureRegistry([createXCapture(boundary)])),
+    ).resolves.toEqual({
+      state: "success",
+      result: {
+        markdown: "# Thread",
+        sourceUrl: "https://x.com/example/status/1234567890",
+      },
+    });
+
+    expect(boundary.captureThread).toHaveBeenCalledWith({
+      tabId: 11,
+      url: "https://x.com/example/status/1234567890",
+    });
+  });
+
+  it("returns an error for supported x status pages before capture is implemented", async () => {
+    chromeMock.tabs.query.mockResolvedValue([
+      {
+        id: 12,
+        url: "https://twitter.com/example/status/1234567890",
+      },
+    ]);
+
+    await expect(getActiveCapture()).resolves.toEqual({
+      state: "error",
+      error: "X capture is not implemented yet.",
     });
   });
 });
