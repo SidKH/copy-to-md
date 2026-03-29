@@ -1,12 +1,26 @@
-import { extractRedditThread } from "@/providers/reddit/extract";
 import { isRedditThreadUrl } from "@/providers/reddit/detect";
 import { formatRedditThreadAsMarkdown } from "@/providers/reddit/markdown";
+import { createFetchRedditTransport } from "@/providers/reddit/transport";
 
-import type { Provider } from "@/core/provider";
+import type { SiteCapture } from "@/core/provider";
+import type { RedditTransport } from "@/providers/reddit/transport";
 
-export const redditProvider: Provider = {
-  id: "reddit",
-  supports: isRedditThreadUrl,
-  extract: extractRedditThread,
-  toMarkdown: (raw, context) => formatRedditThreadAsMarkdown(raw, context.url),
-};
+export function createRedditCapture(transport: RedditTransport): SiteCapture {
+  return {
+    id: "reddit",
+    async tryCapture(request) {
+      if (!isRedditThreadUrl(request.url)) {
+        return null;
+      }
+
+      const payload = await transport.fetchThreadPayload(request.url);
+
+      return {
+        markdown: formatRedditThreadAsMarkdown(payload, request.url),
+        sourceUrl: request.url,
+      };
+    },
+  };
+}
+
+export const redditCapture = createRedditCapture(createFetchRedditTransport());

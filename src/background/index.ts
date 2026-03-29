@@ -1,10 +1,11 @@
-import { getProviderForUrl } from "@/core/registry";
 import { GET_ACTIVE_CAPTURE } from "@/background/messages";
+import { captureRegistry } from "@/core/registry";
 
 import type {
   ActiveCaptureResponse,
   GetActiveCaptureRequest,
 } from "@/background/messages";
+import type { CaptureRegistry } from "@/core/registry";
 
 function isGetActiveCaptureRequest(
   message: unknown,
@@ -17,7 +18,9 @@ function isGetActiveCaptureRequest(
   );
 }
 
-export async function getActiveCapture(): Promise<ActiveCaptureResponse> {
+export async function getActiveCapture(
+  registry: CaptureRegistry = captureRegistry,
+): Promise<ActiveCaptureResponse> {
   const [tab] = await chrome.tabs.query({
     active: true,
     currentWindow: true,
@@ -33,26 +36,19 @@ export async function getActiveCapture(): Promise<ActiveCaptureResponse> {
     };
   }
 
-  const provider = getProviderForUrl(activeUrl);
-
-  if (!provider) {
-    return {
-      state: "unsupported",
-      activeUrl,
-    };
-  }
-
   try {
-    const context = { tabId, url: activeUrl };
-    const raw = await provider.extract(context);
-    const markdown = provider.toMarkdown(raw, context);
+    const result = await registry.tryCapture({ tabId, url: activeUrl });
+
+    if (!result) {
+      return {
+        state: "unsupported",
+        activeUrl,
+      };
+    }
 
     return {
       state: "success",
-      result: {
-        markdown,
-        sourceUrl: activeUrl,
-      },
+      result,
     };
   } catch (error) {
     return {

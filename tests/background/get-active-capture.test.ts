@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getActiveCapture } from "@/background/index";
-
-import { readExpected, readFixturePayload } from "../providers/reddit/fixtures";
+import type { CaptureRegistry } from "@/core/registry";
 
 type ChromeMock = {
   runtime: {
@@ -13,6 +12,10 @@ type ChromeMock = {
   tabs: {
     query: ReturnType<typeof vi.fn>;
   };
+};
+
+type CaptureRegistryMock = CaptureRegistry & {
+  tryCapture: ReturnType<typeof vi.fn>;
 };
 
 function createChromeMock(): ChromeMock {
@@ -28,15 +31,20 @@ function createChromeMock(): ChromeMock {
   };
 }
 
+function createCaptureRegistryMock(): CaptureRegistryMock {
+  return {
+    tryCapture: vi.fn(),
+  };
+}
+
 describe("getActiveCapture", () => {
   let chromeMock: ChromeMock;
-  let fetchMock: ReturnType<typeof vi.fn>;
+  let registryMock: CaptureRegistryMock;
 
   beforeEach(() => {
     chromeMock = createChromeMock();
-    fetchMock = vi.fn();
+    registryMock = createCaptureRegistryMock();
     vi.stubGlobal("chrome", chromeMock);
-    vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
@@ -47,59 +55,61 @@ describe("getActiveCapture", () => {
     chromeMock.tabs.query.mockResolvedValue([
       { id: 1, url: "https://example.com/article" },
     ]);
+    registryMock.tryCapture.mockResolvedValue(null);
 
-    await expect(getActiveCapture()).resolves.toEqual({
+    await expect(getActiveCapture(registryMock)).resolves.toEqual({
       state: "unsupported",
       activeUrl: "https://example.com/article",
     });
+
+    expect(registryMock.tryCapture).toHaveBeenCalledWith({
+      tabId: 1,
+      url: "https://example.com/article",
+    });
   });
 
-  it("returns markdown for a supported reddit thread", async () => {
-    const payload = readFixturePayload("thread-with-comments.json");
-
+  it("returns markdown when a capture succeeds", async () => {
     chromeMock.tabs.query.mockResolvedValue([
       {
         id: 7,
         url: "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
       },
     ]);
+    registryMock.tryCapture.mockResolvedValue({
+      markdown: "# Thread",
+      sourceUrl:
+        "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
+    });
 
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      json: async () => payload,
-    } as Response);
-
-    await expect(getActiveCapture()).resolves.toEqual({
+    await expect(getActiveCapture(registryMock)).resolves.toEqual({
       state: "success",
       result: {
-        markdown: readExpected("thread-with-comments.expected.md"),
+        markdown: "# Thread",
         sourceUrl:
           "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
       },
     });
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://www.reddit.com/r/example/comments/xyz789/comments-thread.json",
+    expect(registryMock.tryCapture).toHaveBeenCalledWith(
+      {
+        tabId: 7,
+        url: "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
+      },
     );
   });
 
-  it("returns an error when reddit fetch fails", async () => {
+  it("returns an error when capture fails", async () => {
     chromeMock.tabs.query.mockResolvedValue([
       {
         id: 7,
         url: "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
       },
     ]);
+    registryMock.tryCapture.mockRejectedValue(
+      new Error("Reddit returned 403 Forbidden"),
+    );
 
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 403,
-      statusText: "Forbidden",
-    } as Response);
-
-    await expect(getActiveCapture()).resolves.toEqual({
+    await expect(getActiveCapture(registryMock)).resolves.toEqual({
       state: "error",
       error: "Reddit returned 403 Forbidden",
     });

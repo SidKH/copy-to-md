@@ -1,9 +1,27 @@
-import { redditProvider } from "@/providers/reddit";
+import { redditCapture } from "@/providers/reddit";
 
-import type { Provider } from "@/core/provider";
+import type { CaptureRequest, CaptureResult, SiteCapture } from "@/core/provider";
 
-const providers: Provider[] = [redditProvider];
+export type CaptureRegistry = {
+  tryCapture(request: CaptureRequest): Promise<CaptureResult | null>;
+};
 
-export function getProviderForUrl(url: string): Provider | null {
-  return providers.find((provider) => provider.supports(url)) ?? null;
+export function createCaptureRegistry(
+  captures: SiteCapture[],
+): CaptureRegistry {
+  return {
+    async tryCapture(request) {
+      for (const capture of captures) {
+        const result = await capture.tryCapture(request);
+
+        if (result) {
+          return result;
+        }
+      }
+
+      return null;
+    },
+  };
 }
+
+export const captureRegistry = createCaptureRegistry([redditCapture]);

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The extension is structured around a provider-based capture pipeline.
+The extension is structured around a capture-boundary pipeline.
 
 The popup UX is shared across all supported websites. It always follows the same interaction model:
 
@@ -12,21 +12,22 @@ The popup UX is shared across all supported websites. It always follows the same
 - the popup shows token count
 - the user clicks `Copy markdown`
 
-Site-specific behavior is isolated behind providers. Each provider owns:
+Site-specific behavior is isolated behind site captures. Each site capture owns:
 
 - URL detection
-- data extraction
+- transport coordination
+- payload parsing and normalization
 - site-specific markdown formatting
 - any page-side integration needed by that site
 
-The shared system is responsible for orchestration and presentation, not site-specific capture logic.
+The shared system is responsible for orchestration and presentation, not site-specific capture internals.
 
 ## Design Principles
 
 - Keep the popup visually generic.
-- Keep provider logic co-located and provider-owned.
+- Keep site-specific capture logic co-located and site-owned.
 - Standardize the capture flow, not the markdown structure.
-- Treat extraction strategy as provider-specific.
+- Treat third-party transport as an explicit provider-owned dependency.
 - Prefer behavior-focused integration tests over implementation-heavy unit tests.
 
 ## System Boundaries
@@ -35,11 +36,11 @@ The extension is split into three main runtime areas:
 
 - popup
 - background
-- providers
+- site captures
 
 ### Popup
 
-The popup is a generic UI layer. It does not know about Reddit, Twitter/X, Discord, or any future provider.
+The popup is a generic UI layer. It does not know about Reddit, Twitter/X, Discord, or any future site capture.
 
 Its responsibilities are:
 
@@ -54,37 +55,36 @@ The popup only consumes a generic capture result.
 
 ### Background
 
-The background layer is the shared orchestrator. It coordinates the full capture flow for the active tab.
+The background layer is the shared orchestrator. It coordinates the active tab and delegates capture execution.
 
 Its responsibilities are:
 
 - resolve the active tab
-- select the matching provider
-- invoke provider extraction
-- invoke provider markdown generation
+- invoke the capture registry
 - convert failures into consistent popup-facing states
 
-The background layer does not contain provider-specific parsing or formatting logic.
+The background layer does not contain site-specific transport, parsing, or formatting logic.
 
-### Providers
+### Site Captures
 
-A provider encapsulates all logic for one site.
+A site capture encapsulates the full capture use case for one site.
 
 Its responsibilities are:
 
-- determine whether a URL is supported
-- extract the site’s raw data
-- generate markdown from that site’s raw data
+- determine whether a request is supported
+- retrieve external payloads through a transport port
+- parse and normalize site data internally
+- generate markdown from that site’s data
 - optionally run page-side helpers such as content scripts or page bridges
 
-Each provider is free to use a different extraction technique. The system does not require providers to normalize their content into one shared document model.
+Each site capture is free to use a different retrieval technique. The system does not require site captures to normalize their content into one shared document model.
 
 ## Capture Flow
 
 The extension uses a single shared pipeline:
 
 ```txt
-popup -> background -> provider -> markdown -> popup
+popup -> background -> registry -> site capture -> popup
 ```
 
 Detailed flow:
@@ -92,13 +92,12 @@ Detailed flow:
 1. The popup opens.
 2. The popup requests capture data for the active tab.
 3. The background retrieves the active tab URL and ID.
-4. The background selects the first provider that supports the URL.
-5. The provider extracts raw site data.
-6. The provider converts that raw data into markdown.
+4. The background delegates to the capture registry.
+5. The first site capture that supports the request performs the full capture flow.
 7. The background returns the capture result to the popup.
 8. The popup renders the shared success UI and allows copy.
 
-If no provider supports the page, the system returns `unsupported`.
+If no site capture supports the page, the system returns `unsupported`.
 
 ## Shared Contracts
 
@@ -121,29 +120,29 @@ type CaptureState =
   | { state: "success"; result: CaptureResult };
 ```
 
-This keeps the UI generic and stable even when providers differ significantly in their payload shape or markdown format.
+This keeps the UI generic and stable even when site captures differ significantly in their payload shape or markdown format.
 
-## Provider Contract
+## Capture Contract
 
-Providers share a minimal interface:
+Site captures share a minimal interface:
 
 ```ts
-type ProviderContext = {
+type CaptureRequest = {
   tabId: number;
   url: string;
 };
 
-type Provider = {
+type SiteCapture = {
   id: string;
-  supports(url: string): boolean;
-  extract(ctx: ProviderContext): Promise<unknown>;
-  toMarkdown(raw: unknown, ctx: ProviderContext): string;
+  tryCapture(request: CaptureRequest): Promise<CaptureResult | null>;
+};
+
+type RedditTransport = {
+  fetchThreadPayload(threadUrl: string): Promise<unknown>;
 };
 ```
 
-This contract deliberately avoids a deep shared normalization model.
-
-Different providers may expose different raw data shapes and different markdown conventions. The common architecture is the capture pipeline itself, not a universal content schema.
+This keeps the caller-facing boundary deep and use-case-oriented while leaving a narrow injectable seam for third-party transport.
 
 ## File Structure
 
@@ -167,7 +166,7 @@ src/
     reddit/
       index.ts
       detect.ts
-      extract.ts
+      transport.ts
       markdown.ts
       types.ts
 
@@ -213,22 +212,20 @@ Loads capture state for the active tab by talking to the background layer.
 Implements the shared orchestration flow:
 
 - active tab lookup
-- provider selection
-- extraction
-- markdown generation
+- registry delegation
 - error handling
 
 ### `src/background/messages.ts`
 
-Defines message names shared between popup, background, and any provider-owned page-side code.
+Defines message names shared between popup, background, and any site-owned page-side code.
 
 ### `src/core/provider.ts`
 
-Defines shared provider contracts and types.
+Defines shared capture contracts and types.
 
 ### `src/core/registry.ts`
 
-Registers all providers and exposes provider lookup helpers.
+Registers all site captures and exposes the shared capture registry.
 
 ### `src/core/errors.ts`
 
@@ -240,11 +237,11 @@ Contains provider-specific URL detection logic.
 
 ### `src/providers/<provider>/extract.ts`
 
-Contains provider-specific extraction logic.
+Contains provider-specific transport logic.
 
 Examples:
 
-- Reddit can use public fetch
+- Reddit can use public fetch behind a transport port
 - Twitter/X can use authenticated request replay
 - Discord can use page-side integration plus authenticated request replay
 
@@ -264,7 +261,7 @@ Contains provider-owned page-context integration when a provider needs access be
 
 ### `src/providers/<provider>/index.ts`
 
-Exports the assembled provider.
+Exports the assembled site capture.
 
 ## Provider-Owned Page Integration
 
@@ -272,8 +269,8 @@ Page-side code lives inside the provider folder rather than in one shared top-le
 
 This keeps site-specific logic localized:
 
-- provider detection
-- extraction
+- capture detection
+- transport coordination
 - markdown generation
 - page-side integration
 
@@ -281,19 +278,19 @@ The rule is that provider-owned page-side files gather or bridge data, but do no
 
 ## Unsupported Pages
 
-A page is unsupported when no provider recognizes it as a supported post page.
+A page is unsupported when no site capture recognizes it as a supported post page.
 
 Examples:
 
 - a non-supported host
 - a supported host on a non-post route
-- a page shape the provider intentionally does not handle
+- a page shape the site capture intentionally does not handle
 
 Unsupported pages return the shared `unsupported` state to the popup.
 
 ## Markdown Ownership
 
-Markdown formatting is provider-specific.
+Markdown formatting is site-specific.
 
 This is an intentional architectural choice. Different sites carry different semantics and should not be forced into one markdown schema prematurely.
 
@@ -311,45 +308,38 @@ The test suite is structured around behavior.
 
 The primary test layers are:
 
-- provider integration tests
+- site capture boundary tests
 - background orchestration tests
-- a small number of detection tests
 - lightweight popup behavior tests
 
-### Provider Integration Tests
+### Site Capture Boundary Tests
 
-These are the main tests for provider behavior.
+These are the main tests for site-specific behavior.
 
 Typical shape:
 
 ```txt
-raw fixture -> provider markdown output
+request -> site capture result
 ```
 
 These tests verify:
 
+- unsupported URLs return `null`
 - supported content is rendered correctly
 - nested structures are preserved correctly
 - deleted or missing content is handled correctly
-- provider-specific markdown output stays stable
+- transport failures surface correctly
+- site-specific markdown output stays stable
 
 ### Background Orchestration Tests
 
 These tests verify the shared capture pipeline:
 
 - active tab lookup
-- provider selection
+- capture registry delegation
 - unsupported state
-- provider failure handling
+- capture failure handling
 - successful result delivery to the popup layer
-
-### Detection Tests
-
-These remain small and cheap:
-
-- supported route
-- unsupported route
-- unsupported host
 
 ### Popup Tests
 
@@ -364,19 +354,19 @@ The popup is not tested heavily for internal implementation details.
 
 ## Extensibility
 
-Adding a new provider should require:
+Adding a new site capture should require:
 
 - creating a new provider folder
-- implementing its detection, extraction, and markdown logic
-- registering it in the provider registry
+- implementing its capture boundary, transport, and markdown logic
+- registering it in the capture registry
 
 The popup and shared orchestration flow remain unchanged.
 
-This lets the architecture support providers with very different extraction strategies without forcing a shared content model too early.
+This lets the architecture support providers with very different retrieval strategies without forcing a shared content model too early.
 
 ## Summary
 
-The architecture is centered on a shared capture pipeline with provider-owned site logic.
+The architecture is centered on a shared capture pipeline with deep site-owned capture boundaries.
 
 - The popup is generic.
 - The background orchestrates.

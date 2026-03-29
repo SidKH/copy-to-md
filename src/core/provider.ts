@@ -3,14 +3,12 @@ export type CaptureResult = {
   sourceUrl: string;
 };
 
-export type ProviderContext = {
+export type CaptureRequest = {
   tabId: number;
   url: string;
 };
 
-export type Provider<Raw = unknown> = {
+export type SiteCapture = {
   id: string;
-  supports(url: string): boolean;
-  extract(ctx: ProviderContext): Promise<Raw>;
-  toMarkdown(raw: Raw, ctx: ProviderContext): string;
+  tryCapture(request: CaptureRequest): Promise<CaptureResult | null>;
 };

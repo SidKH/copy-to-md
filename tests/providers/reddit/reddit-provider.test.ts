@@ -1,61 +1,96 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatRedditThreadAsMarkdown } from "@/providers/reddit/markdown";
-import { isRedditThreadUrl } from "@/providers/reddit/detect";
+import { createRedditCapture } from "@/providers/reddit";
 
 import { readExpected, readFixturePayload } from "./fixtures";
 
-describe("reddit provider", () => {
-  it("supports reddit thread URLs and rejects non-thread pages", () => {
-    expect(
-      isRedditThreadUrl(
-        "https://www.reddit.com/r/example/comments/abc123/hello/",
-      ),
-    ).toBe(true);
+describe("reddit capture", () => {
+  const transport = {
+    fetchThreadPayload: vi.fn(),
+  };
 
-    expect(isRedditThreadUrl("https://www.reddit.com/r/example/")).toBe(false);
-    expect(isRedditThreadUrl("https://x.com/example/status/123")).toBe(false);
+  const capture = createRedditCapture(transport);
+
+  beforeEach(() => {
+    transport.fetchThreadPayload.mockReset();
   });
 
-  it("formats a minimal thread with no comments", () => {
-    const payload = readFixturePayload("minimal-thread-no-comments.json");
-    const markdown = formatRedditThreadAsMarkdown(
-      payload,
-      "https://www.reddit.com/r/example/comments/abc123/hello/",
-    );
+  it("returns null for unsupported URLs", async () => {
+    await expect(
+      capture.tryCapture({
+        tabId: 1,
+        url: "https://x.com/example/status/123",
+      }),
+    ).resolves.toBeNull();
 
-    expect(markdown).toBe(
-      readExpected("minimal-thread-no-comments.expected.md"),
-    );
+    expect(transport.fetchThreadPayload).not.toHaveBeenCalled();
   });
 
-  it("formats a thread with nested comments", () => {
-    const payload = readFixturePayload("thread-with-comments.json");
-    const markdown = formatRedditThreadAsMarkdown(
-      payload,
+  it("returns markdown for a supported reddit thread", async () => {
+    transport.fetchThreadPayload.mockResolvedValue(
+      readFixturePayload("thread-with-comments.json"),
+    );
+
+    await expect(
+      capture.tryCapture({
+        tabId: 7,
+        url: "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
+      }),
+    ).resolves.toEqual({
+      markdown: readExpected("thread-with-comments.expected.md"),
+      sourceUrl:
+        "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
+    });
+
+    expect(transport.fetchThreadPayload).toHaveBeenCalledWith(
       "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
     );
-
-    expect(markdown).toBe(readExpected("thread-with-comments.expected.md"));
   });
 
-  it("omits leaf deleted comments and preserves deleted branches with replies", () => {
-    const payload = readFixturePayload("deleted-comments-thread.json");
-    const markdown = formatRedditThreadAsMarkdown(
-      payload,
-      "https://www.reddit.com/r/example/comments/del123/deleted-case/",
+  it("preserves deleted branches with replies", async () => {
+    transport.fetchThreadPayload.mockResolvedValue(
+      readFixturePayload("deleted-comments-thread.json"),
     );
 
-    expect(markdown).toBe(readExpected("deleted-comments-thread.expected.md"));
+    await expect(
+      capture.tryCapture({
+        tabId: 7,
+        url: "https://www.reddit.com/r/example/comments/del123/deleted-case/",
+      }),
+    ).resolves.toEqual({
+      markdown: readExpected("deleted-comments-thread.expected.md"),
+      sourceUrl:
+        "https://www.reddit.com/r/example/comments/del123/deleted-case/",
+    });
   });
 
-  it("formats image posts with preview markdown above the caption", () => {
-    const payload = readFixturePayload("image-submission-thread.json");
-    const markdown = formatRedditThreadAsMarkdown(
-      payload,
-      "https://www.reddit.com/r/codex/comments/1rwqy9x/this_is_insane/",
+  it("preserves image-post rendering", async () => {
+    transport.fetchThreadPayload.mockResolvedValue(
+      readFixturePayload("image-submission-thread.json"),
     );
 
-    expect(markdown).toBe(readExpected("image-submission-thread.expected.md"));
+    await expect(
+      capture.tryCapture({
+        tabId: 7,
+        url: "https://www.reddit.com/r/codex/comments/1rwqy9x/this_is_insane/",
+      }),
+    ).resolves.toEqual({
+      markdown: readExpected("image-submission-thread.expected.md"),
+      sourceUrl:
+        "https://www.reddit.com/r/codex/comments/1rwqy9x/this_is_insane/",
+    });
+  });
+
+  it("surfaces transport failures as capture errors", async () => {
+    transport.fetchThreadPayload.mockRejectedValue(
+      new Error("Reddit returned 403 Forbidden"),
+    );
+
+    await expect(
+      capture.tryCapture({
+        tabId: 7,
+        url: "https://www.reddit.com/r/example/comments/xyz789/comments-thread/",
+      }),
+    ).rejects.toThrow("Reddit returned 403 Forbidden");
   });
 });
