@@ -27,9 +27,13 @@ export default defineManifest({
     },
     default_popup: 'src/popup/index.html',
   },
-  permissions: ['tabs'],
+  permissions: ['activeTab', 'scripting', 'tabs'],
   host_permissions: [
     'https://www.reddit.com/*',
     'https://reddit.com/*',
+    'https://www.x.com/*',
+    'https://x.com/*',
+    'https://www.twitter.com/*',
+    'https://twitter.com/*',
   ],
 })
