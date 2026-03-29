@@ -1,4 +1,5 @@
 import { redditCapture } from "@/providers/reddit";
+import { xCapture } from "@/providers/x";
 
 import type { CaptureRequest, CaptureResult, SiteCapture } from "@/core/provider";
 
@@ -24,4 +25,4 @@ export function createCaptureRegistry(
   };
 }
 
-export const captureRegistry = createCaptureRegistry([redditCapture]);
+export const captureRegistry = createCaptureRegistry([redditCapture, xCapture]);
