@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getActiveCapture } from "@/background/index";
 import { createCaptureRegistry } from "@/core/registry";
-import { createXCapture } from "@/providers/x";
+import { createXCapture, createXCaptureBoundary } from "@/providers/x";
 import type { CaptureRegistry } from "@/core/registry";
 
 type ChromeMock = {
@@ -118,10 +118,17 @@ describe("getActiveCapture", () => {
   });
 
   it("routes supported x status pages through the provider boundary", async () => {
-    const boundary = {
-      captureThread: vi.fn().mockResolvedValue({
-        markdown: "# Thread",
-        sourceUrl: "https://x.com/example/status/1234567890",
+    const source = {
+      fetchRootPostPayload: vi.fn().mockResolvedValue({
+        rootPost: {
+          id: "1234567890",
+          authorHandle: "example",
+          postedAt: "2025-01-01T23:30:00.000Z",
+          text: "Hello from X",
+          retweetCount: 12,
+          likeCount: 34,
+          links: [],
+        },
       }),
     };
 
@@ -133,16 +140,24 @@ describe("getActiveCapture", () => {
     ]);
 
     await expect(
-      getActiveCapture(createCaptureRegistry([createXCapture(boundary)])),
+      getActiveCapture(
+        createCaptureRegistry([createXCapture(createXCaptureBoundary(source))]),
+      ),
     ).resolves.toEqual({
       state: "success",
       result: {
-        markdown: "# Thread",
+        markdown: `# Thread
+
+https://x.com/example/status/1234567890
+
+January 1, 2025 at 11:30 PM
+
+- @example | January 1, 2025 at 11:30 PM | Hello from X | Reposts 12 | Likes 34`,
         sourceUrl: "https://x.com/example/status/1234567890",
       },
     });
 
-    expect(boundary.captureThread).toHaveBeenCalledWith({
+    expect(source.fetchRootPostPayload).toHaveBeenCalledWith({
       tabId: 11,
       url: "https://x.com/example/status/1234567890",
     });
@@ -158,7 +173,7 @@ describe("getActiveCapture", () => {
 
     await expect(getActiveCapture()).resolves.toEqual({
       state: "error",
-      error: "X capture is not implemented yet.",
+      error: "X root-post extraction requires the Chrome scripting API.",
     });
   });
 });
