@@ -1,16 +1,15 @@
 import type { CaptureRequest } from "@/core/provider";
+import { createDevLogger } from "@/lib/debug";
 
-export type XRootPostPayload = {
-  rootPost: {
-    id: string;
-    authorHandle: string;
-    postedAt: string;
-    text: string;
-    retweetCount: number;
-    likeCount: number;
-    links: string[];
-  };
-};
+type XConversationReplayScriptResult =
+  | {
+      ok: true;
+      payload: unknown;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 type ExecuteScriptResult<T> = Array<{
   result?: T;
@@ -19,39 +18,65 @@ type ExecuteScriptResult<T> = Array<{
 export type XScriptingApi = {
   executeScript(
     injection: chrome.scripting.ScriptInjection<
-      [string],
-      XRootPostPayload | null
+      [],
+      XConversationReplayScriptResult
     >,
-  ): Promise<ExecuteScriptResult<XRootPostPayload | null>>;
+  ): Promise<ExecuteScriptResult<XConversationReplayScriptResult>>;
 };
 
-export type XRootPostSource = {
-  fetchRootPostPayload(request: CaptureRequest): Promise<XRootPostPayload>;
+export type XConversationSource = {
+  fetchConversationPayload(request: CaptureRequest): Promise<unknown>;
 };
+
+const logger = createDevLogger("x:source");
 
 export function createXTabSource(
   scripting: XScriptingApi | undefined = getChromeScripting(),
-): XRootPostSource {
+): XConversationSource {
   return {
-    async fetchRootPostPayload(request) {
+    async fetchConversationPayload(request) {
       if (!scripting) {
-        throw new Error("X root-post extraction requires the Chrome scripting API.");
+        throw new Error("X conversation replay requires the Chrome scripting API.");
       }
 
+      logger.debug("replaying x conversation payload", {
+        tabId: request.tabId,
+        url: request.url,
+      });
+
       const [injectionResult] = await scripting.executeScript({
-        args: [request.url],
-        func: extractRootPostFromPage,
+        func:
+          replayCapturedConversationFromPage as unknown as () => XConversationReplayScriptResult,
         target: {
           tabId: request.tabId,
         },
         world: "MAIN",
       });
+      const result = injectionResult?.result;
 
-      if (!injectionResult?.result) {
-        throw new Error("Failed to extract the X root post from the page.");
+      if (!result) {
+        logger.warn("x conversation replay returned no result", {
+          tabId: request.tabId,
+          url: request.url,
+        });
+        throw new Error("Failed to replay the X conversation request.");
       }
 
-      return injectionResult.result;
+      if (!result.ok) {
+        logger.warn("x conversation replay returned an error", {
+          error: result.error,
+          tabId: request.tabId,
+          url: request.url,
+        });
+        throw new Error(result.error);
+      }
+
+      logger.debug("x conversation replay succeeded", {
+        tabId: request.tabId,
+        url: request.url,
+      });
+
+      return result.payload;
     },
   };
 }
@@ -64,176 +89,40 @@ function getChromeScripting(): XScriptingApi | undefined {
   return chrome.scripting;
 }
 
-function extractRootPostFromPage(sourceUrl: string): XRootPostPayload | null {
-  function parseSafeUrl(value: string): URL | null {
-    try {
-      return new URL(value);
-    } catch {
-      return null;
-    }
+async function replayCapturedConversationFromPage(): Promise<XConversationReplayScriptResult> {
+  const bridgeKey = "__COPY_TO_MD_X_CONVERSATION_BRIDGE__";
+  const bridgeOwner = globalThis as Record<string, unknown>;
+  const bridge = bridgeOwner[bridgeKey];
+
+  if (
+    !bridge ||
+    typeof bridge !== "object" ||
+    typeof (bridge as { replayLatest?: unknown }).replayLatest !== "function"
+  ) {
+    return {
+      ok: false,
+      error: "X conversation replay bridge is unavailable on this page.",
+    };
   }
 
-  function getStatusIdFromUrl(url: URL): string | null {
-    const parts = url.pathname.split("/").filter(Boolean);
-
-    if (parts.length < 3 || parts[1] !== "status" || !parts[2]) {
-      return null;
-    }
-
-    return parts[2];
-  }
-
-  function findRootPostArticle(statusId: string): HTMLElement | null {
-    const timeAnchors = Array.from(
-      document.querySelectorAll<HTMLAnchorElement>(`a[href*="/status/${statusId}"]`),
-    );
-
-    for (const anchor of timeAnchors) {
-      const article = anchor.closest("article");
-
-      if (article instanceof HTMLElement) {
-        return article;
+  try {
+    const payload = await (
+      bridge as {
+        replayLatest(): Promise<unknown>;
       }
-    }
+    ).replayLatest();
 
-    return null;
+    return {
+      ok: true,
+      payload,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to replay the X conversation request.",
+    };
   }
-
-  function getAuthorHandle(article: HTMLElement, url: URL): string | null {
-    const explicitHandle = article
-      .querySelector<HTMLAnchorElement>('a[role="link"][href^="/"]')
-      ?.getAttribute("href")
-      ?.split("/")
-      .filter(Boolean)[0];
-
-    if (explicitHandle) {
-      return explicitHandle;
-    }
-
-    const parts = url.pathname.split("/").filter(Boolean);
-    return parts[0] ?? null;
-  }
-
-  function getPostedAt(article: HTMLElement): string | null {
-    const dateTime = article.querySelector("time")?.getAttribute("datetime");
-    return dateTime && !Number.isNaN(Date.parse(dateTime)) ? dateTime : null;
-  }
-
-  function normalizeWhitespace(value: string): string {
-    return value.replace(/\s+/g, " ").trim();
-  }
-
-  function getText(article: HTMLElement): string {
-    const text = article.querySelector<HTMLElement>('[data-testid="tweetText"]');
-    return normalizeWhitespace(text?.innerText ?? text?.textContent ?? "");
-  }
-
-  function parseMetric(value: string): number | null {
-    const match = value.match(/([\d.,]+)\s*([KM])?/i);
-
-    if (!match) {
-      return null;
-    }
-
-    const numericPart = Number.parseFloat(match[1].replace(/,/g, ""));
-
-    if (!Number.isFinite(numericPart)) {
-      return null;
-    }
-
-    const suffix = match[2]?.toUpperCase();
-
-    if (suffix === "K") {
-      return Math.round(numericPart * 1_000);
-    }
-
-    if (suffix === "M") {
-      return Math.round(numericPart * 1_000_000);
-    }
-
-    return Math.round(numericPart);
-  }
-
-  function getMetric(article: HTMLElement, testIds: string[]): number {
-    for (const testId of testIds) {
-      const metricNode = article.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
-
-      if (!metricNode) {
-        continue;
-      }
-
-      const labelledValue =
-        metricNode.getAttribute("aria-label") ??
-        metricNode.closest<HTMLElement>("[aria-label]")?.getAttribute("aria-label") ??
-        "";
-      const parsedLabel = parseMetric(labelledValue);
-
-      if (parsedLabel != null) {
-        return parsedLabel;
-      }
-
-      const parsedText = parseMetric(metricNode.innerText || metricNode.textContent || "");
-
-      if (parsedText != null) {
-        return parsedText;
-      }
-    }
-
-    return 0;
-  }
-
-  function getLinks(article: HTMLElement, statusId: string): string[] {
-    const links = Array.from(article.querySelectorAll<HTMLAnchorElement>("a[href]"))
-      .map((anchor) => anchor.href)
-      .filter((href) => {
-        if (!href) {
-          return false;
-        }
-
-        if (href.includes(`/status/${statusId}`)) {
-          return false;
-        }
-
-        return /^https?:\/\//.test(href);
-      });
-
-    return Array.from(new Set(links));
-  }
-
-  const parsedUrl = parseSafeUrl(sourceUrl);
-
-  if (!parsedUrl) {
-    return null;
-  }
-
-  const statusId = getStatusIdFromUrl(parsedUrl);
-
-  if (!statusId) {
-    return null;
-  }
-
-  const article = findRootPostArticle(statusId);
-
-  if (!article) {
-    return null;
-  }
-
-  const authorHandle = getAuthorHandle(article, parsedUrl);
-  const postedAt = getPostedAt(article);
-
-  if (!authorHandle || !postedAt) {
-    return null;
-  }
-
-  return {
-    rootPost: {
-      id: statusId,
-      authorHandle,
-      postedAt,
-      text: getText(article),
-      retweetCount: getMetric(article, ["repost", "retweet", "unrepost", "unretweet"]),
-      likeCount: getMetric(article, ["like", "unlike"]),
-      links: getLinks(article, statusId),
-    },
-  };
 }

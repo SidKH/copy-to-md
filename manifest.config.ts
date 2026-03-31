@@ -27,8 +27,23 @@ export default defineManifest({
     },
     default_popup: 'src/popup/index.html',
   },
+  content_scripts: [
+    {
+      matches: [
+        'https://www.x.com/*',
+        'https://x.com/*',
+        'https://www.twitter.com/*',
+        'https://twitter.com/*',
+      ],
+      js: ['src/providers/x/bridge.main.ts'],
+      run_at: 'document_start',
+      world: 'MAIN',
+    },
+  ],
   permissions: ['activeTab', 'scripting', 'tabs'],
   host_permissions: [
+    'http://127.0.0.1:47321/*',
+    'http://localhost:47321/*',
     'https://www.reddit.com/*',
     'https://reddit.com/*',
     'https://www.x.com/*',

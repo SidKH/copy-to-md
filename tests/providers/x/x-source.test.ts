@@ -3,18 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import { createXTabSource } from "@/providers/x/source";
 
 describe("x tab source", () => {
-  it("extracts the root post payload from the active tab", async () => {
+  it("replays the captured conversation request in the active tab", async () => {
     const executeScript = vi.fn().mockResolvedValue([
       {
         result: {
-          rootPost: {
-            id: "1234567890",
-            authorHandle: "example",
-            postedAt: "2025-01-01T23:30:00.000Z",
-            text: "Hello from X",
-            retweetCount: 12,
-            likeCount: 34,
-            links: ["https://example.com/article"],
+          ok: true,
+          payload: {
+            data: {
+              threaded_conversation_with_injections_v2: {
+                instructions: [],
+              },
+            },
           },
         },
       },
@@ -23,24 +22,19 @@ describe("x tab source", () => {
     const source = createXTabSource({ executeScript });
 
     await expect(
-      source.fetchRootPostPayload({
+      source.fetchConversationPayload({
         tabId: 7,
         url: "https://x.com/example/status/1234567890",
       }),
     ).resolves.toEqual({
-      rootPost: {
-        id: "1234567890",
-        authorHandle: "example",
-        postedAt: "2025-01-01T23:30:00.000Z",
-        text: "Hello from X",
-        retweetCount: 12,
-        likeCount: 34,
-        links: ["https://example.com/article"],
+      data: {
+        threaded_conversation_with_injections_v2: {
+          instructions: [],
+        },
       },
     });
 
     expect(executeScript).toHaveBeenCalledWith({
-      args: ["https://x.com/example/status/1234567890"],
       func: expect.any(Function),
       target: {
         tabId: 7,
@@ -49,39 +43,41 @@ describe("x tab source", () => {
     });
   });
 
-  it("fails clearly when the page bridge cannot find the root post", async () => {
-    const executeScript = vi.fn().mockResolvedValue([{ result: null }]);
-
-    const source = createXTabSource({ executeScript });
-
-    await expect(
-      source.fetchRootPostPayload({
-        tabId: 7,
-        url: "https://x.com/example/status/1234567890",
-      }),
-    ).rejects.toThrow("Failed to extract the X root post from the page.");
-  });
-
-  it("passes a self-contained extraction function to chrome scripting", async () => {
+  it("fails clearly when no captured template is available for the page", async () => {
     const executeScript = vi.fn().mockResolvedValue([
       {
         result: {
-          rootPost: {
-            id: "1234567890",
-            authorHandle: "example",
-            postedAt: "2025-01-01T23:30:00.000Z",
-            text: "Hello from X",
-            retweetCount: 12,
-            likeCount: 34,
-            links: [],
-          },
+          ok: false,
+          error: "No captured X conversation request is available for this page.",
         },
       },
     ]);
 
     const source = createXTabSource({ executeScript });
 
-    await source.fetchRootPostPayload({
+    await expect(
+      source.fetchConversationPayload({
+        tabId: 7,
+        url: "https://x.com/example/status/1234567890",
+      }),
+    ).rejects.toThrow(
+      "No captured X conversation request is available for this page.",
+    );
+  });
+
+  it("passes a self-contained replay function to chrome scripting", async () => {
+    const executeScript = vi.fn().mockResolvedValue([
+      {
+        result: {
+          ok: true,
+          payload: null,
+        },
+      },
+    ]);
+
+    const source = createXTabSource({ executeScript });
+
+    await source.fetchConversationPayload({
       tabId: 7,
       url: "https://x.com/example/status/1234567890",
     });
@@ -89,9 +85,11 @@ describe("x tab source", () => {
     const injection = executeScript.mock.calls[0]?.[0];
     const isolatedFunc = new Function(
       `return (${String(injection.func)});`,
-    )() as (sourceUrl: string) => unknown;
+    )() as () => Promise<unknown>;
 
-    expect(() => isolatedFunc("not a valid url")).not.toThrow();
-    expect(isolatedFunc("not a valid url")).toBeNull();
+    await expect(isolatedFunc()).resolves.toEqual({
+      ok: false,
+      error: "X conversation replay bridge is unavailable on this page.",
+    });
   });
 });

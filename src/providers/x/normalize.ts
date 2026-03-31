@@ -1,46 +1,90 @@
-import type { XPost, XThread } from "@/providers/x/model";
+import type { XPost, XReply, XThread } from "@/providers/x/model";
+
+export type XPayloadDebugSummary = {
+  candidateTweetIds: string[];
+  parsedTweetCount: number;
+  rootFound: boolean;
+  sourceUrl: string | undefined;
+  statusId: string | null;
+  topLevelErrorCount: number;
+  tweetResultCount: number;
+};
 
 export function normalizeXThread(
   payload: unknown,
   sourceUrl?: string,
 ): XThread | null {
-  const extracted = parseExtractedRootPost(payload);
-
-  if (extracted) {
-    return {
-      rootPost: extracted,
-      replies: [],
-    };
-  }
-
   const statusId = sourceUrl ? getStatusIdFromUrl(sourceUrl) : null;
-  const tweet = findTweetResult(payload, statusId);
+  const tweets = collectTweetResults(payload);
 
-  if (!tweet) {
+  if (tweets.length === 0) {
     return null;
   }
 
-  const rootPost = parseTweetResult(tweet, sourceUrl);
+  const nodes = tweets
+    .map((tweet) => parseTweetNode(tweet, sourceUrl))
+    .filter((node): node is ParsedTweetNode => Boolean(node));
+  const rootNode = statusId
+    ? nodes.find((node) => node.post.id === statusId) ?? null
+    : nodes[0] ?? null;
 
-  if (!rootPost) {
+  if (!rootNode) {
     return null;
+  }
+
+  const repliesByParentId = new Map<string, XReply[]>();
+
+  for (const node of nodes) {
+    if (!node.parentId || node.post.id === rootNode.post.id) {
+      continue;
+    }
+
+    const reply: XReply = {
+      post: node.post,
+      replies: repliesByParentId.get(node.post.id) ?? [],
+    };
+    const siblingReplies = repliesByParentId.get(node.parentId) ?? [];
+
+    siblingReplies.push(reply);
+    repliesByParentId.set(node.parentId, siblingReplies);
   }
 
   return {
-    rootPost,
-    replies: [],
+    rootPost: rootNode.post,
+    replies: repliesByParentId.get(rootNode.post.id) ?? [],
   };
 }
 
-function parseExtractedRootPost(payload: unknown): XPost | null {
-  if (!isRecord(payload) || !isRecord(payload.rootPost)) {
-    return null;
-  }
+export function summarizeXPayloadForDebug(
+  payload: unknown,
+  sourceUrl?: string,
+): XPayloadDebugSummary {
+  const statusId = sourceUrl ? getStatusIdFromUrl(sourceUrl) : null;
+  const tweets = collectTweetResults(payload);
+  const nodes = tweets
+    .map((tweet) => parseTweetNode(tweet, sourceUrl))
+    .filter((node): node is ParsedTweetNode => Boolean(node));
 
-  return parsePostRecord(payload.rootPost);
+  return {
+    candidateTweetIds: nodes.slice(0, 20).map((node) => node.post.id),
+    parsedTweetCount: nodes.length,
+    rootFound: statusId ? nodes.some((node) => node.post.id === statusId) : nodes.length > 0,
+    sourceUrl,
+    statusId,
+    topLevelErrorCount: getTopLevelErrorCount(payload),
+    tweetResultCount: tweets.length,
+  };
 }
 
-function parseTweetResult(value: Record<string, unknown>, sourceUrl?: string): XPost | null {
+type ParsedTweetNode = {
+  post: XPost;
+  parentId: string | null;
+};
+
+function parseTweetNode(
+  value: Record<string, unknown>,
+  sourceUrl?: string,
+): ParsedTweetNode | null {
   const id = getString(value.rest_id);
   const legacy = getRecord(value.legacy);
 
@@ -51,9 +95,15 @@ function parseTweetResult(value: Record<string, unknown>, sourceUrl?: string): X
   const authorHandle =
     getString(
       getRecord(
+        getRecord(getRecord(getRecord(value.core)?.user_results)?.result)?.core,
+      )?.screen_name,
+    ) ??
+    getString(
+      getRecord(
         getRecord(getRecord(getRecord(value.core)?.user_results)?.result)?.legacy,
       )?.screen_name,
-    ) ?? getHandleFromUrl(sourceUrl);
+    ) ??
+    getHandleFromUrl(sourceUrl);
   const postedAt = parseTimestamp(getString(legacy.created_at));
 
   if (!authorHandle || !postedAt) {
@@ -61,13 +111,16 @@ function parseTweetResult(value: Record<string, unknown>, sourceUrl?: string): X
   }
 
   return {
-    id,
-    authorHandle,
-    postedAt,
-    text: getTweetText(value, legacy),
-    retweetCount: getNumber(legacy.retweet_count),
-    likeCount: getNumber(legacy.favorite_count),
-    links: getTweetLinks(legacy),
+    post: {
+      id,
+      authorHandle,
+      postedAt,
+      text: getTweetText(value, legacy),
+      retweetCount: getNumber(legacy.retweet_count),
+      likeCount: getNumber(legacy.favorite_count),
+      links: getTweetLinks(legacy),
+    },
+    parentId: getString(legacy.in_reply_to_status_id_str),
   };
 }
 
@@ -105,83 +158,47 @@ function getTweetLinks(legacy: Record<string, unknown>): string[] {
   return Array.from(new Set([...urls, ...media]));
 }
 
-function findTweetResult(
-  payload: unknown,
-  statusId: string | null,
-): Record<string, unknown> | null {
+function collectTweetResults(payload: unknown): Record<string, unknown>[] {
   const seen = new Set<unknown>();
+  const tweets: Record<string, unknown>[] = [];
 
-  function visit(value: unknown): Record<string, unknown> | null {
+  function visit(value: unknown): void {
     if (!value || typeof value !== "object") {
-      return null;
+      return;
     }
 
     if (seen.has(value)) {
-      return null;
+      return;
     }
 
     seen.add(value);
 
     if (Array.isArray(value)) {
       for (const item of value) {
-        const match = visit(item);
-
-        if (match) {
-          return match;
-        }
+        visit(item);
       }
-
-      return null;
+      return;
     }
 
     if (!isRecord(value)) {
-      return null;
+      return;
     }
 
     if (looksLikeTweetResult(value)) {
-      const restId = getString(value.rest_id);
-
-      if (!statusId || restId === statusId) {
-        return value;
-      }
+      tweets.push(value);
     }
 
     for (const nested of Object.values(value)) {
-      const match = visit(nested);
-
-      if (match) {
-        return match;
-      }
+      visit(nested);
     }
-
-    return null;
   }
 
-  return visit(payload);
+  visit(payload);
+  return tweets;
 }
 
 function looksLikeTweetResult(value: Record<string, unknown>): boolean {
   return typeof value.rest_id === "string" && isRecord(value.legacy);
-}
-
-function parsePostRecord(value: Record<string, unknown>): XPost | null {
-  const id = getString(value.id);
-  const authorHandle = getString(value.authorHandle);
-  const postedAt = parseTimestamp(getString(value.postedAt));
-
-  if (!id || !authorHandle || !postedAt) {
-    return null;
-  }
-
-  return {
-    id,
-    authorHandle,
-    postedAt,
-    text: getString(value.text) ?? "",
-    retweetCount: getNumber(value.retweetCount),
-    likeCount: getNumber(value.likeCount),
-    links: getStringArray(value.links),
-  };
 }
 
 function parseTimestamp(value: string | null): string | null {
@@ -191,6 +208,14 @@ function parseTimestamp(value: string | null): string | null {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function getTopLevelErrorCount(payload: unknown): number {
+  if (!isRecord(payload) || !Array.isArray(payload.errors)) {
+    return 0;
+  }
+
+  return payload.errors.length;
 }
 
 function getStatusIdFromUrl(url: string): string | null {
@@ -232,14 +257,6 @@ function getRecordArray(value: unknown): Record<string, unknown>[] {
 
 function getString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function getStringArray(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value
-        .map((entry) => getString(entry))
-        .filter((entry): entry is string => Boolean(entry))
-    : [];
 }
 
 function getNumber(value: unknown): number {

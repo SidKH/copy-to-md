@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "debug:logs": "node scripts/dev-log-server.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "icons": "bash scripts/generate-icons.sh"

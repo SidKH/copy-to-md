@@ -1,10 +1,13 @@
 import { isXStatusUrl } from "@/providers/x/detect";
 import { formatXThreadAsMarkdown } from "@/providers/x/markdown";
-import { normalizeXThread } from "@/providers/x/normalize";
+import { normalizeXThread, summarizeXPayloadForDebug } from "@/providers/x/normalize";
 import { createXTabSource } from "@/providers/x/source";
+import { createDevLogger } from "@/lib/debug";
 
 import type { CaptureRequest, CaptureResult, SiteCapture } from "@/core/provider";
-import type { XRootPostSource } from "@/providers/x/source";
+import type { XConversationSource } from "@/providers/x/source";
+
+const logger = createDevLogger("x");
 
 export type XCaptureBoundary = {
   captureThread(request: CaptureRequest): Promise<CaptureResult>;
@@ -24,19 +27,32 @@ export function createXCapture(boundary: XCaptureBoundary): SiteCapture {
 }
 
 export function createXCaptureBoundary(
-  source: XRootPostSource,
+  source: XConversationSource,
 ): XCaptureBoundary {
   return {
     async captureThread(request) {
-      const payload = await source.fetchRootPostPayload(request);
+      logger.debug("capturing x thread", { url: request.url });
+      const payload = await source.fetchConversationPayload(request);
+      const payloadSummary = summarizeXPayloadForDebug(payload, request.url);
+
+      logger.debug("x payload replayed", payloadSummary);
       const thread = normalizeXThread(payload, request.url);
 
       if (!thread) {
-        throw new Error("Failed to parse the X root post.");
+        logger.warn("failed to normalize x payload", payloadSummary);
+        throw new Error("Failed to parse the X conversation payload.");
       }
 
+      const markdown = formatXThreadAsMarkdown(thread, request.url);
+
+      logger.debug("x thread captured", {
+        markdownLength: markdown.length,
+        replyCount: thread.replies.length,
+        rootPostId: thread.rootPost.id,
+      });
+
       return {
-        markdown: formatXThreadAsMarkdown(thread, request.url),
+        markdown,
         sourceUrl: request.url,
       };
     },
