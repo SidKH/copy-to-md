@@ -6,13 +6,13 @@ import { readExpected } from "./fixtures";
 
 describe("x capture", () => {
   const source = {
-    fetchRootPostPayload: vi.fn(),
+    fetchConversationPayload: vi.fn(),
   };
 
   const capture = createXCapture(createXCaptureBoundary(source));
 
   beforeEach(() => {
-    source.fetchRootPostPayload.mockReset();
+    source.fetchConversationPayload.mockReset();
   });
 
   it("returns null for unsupported x surfaces", async () => {
@@ -30,22 +30,116 @@ describe("x capture", () => {
       }),
     ).resolves.toBeNull();
 
-    expect(source.fetchRootPostPayload).not.toHaveBeenCalled();
+    expect(source.fetchConversationPayload).not.toHaveBeenCalled();
   });
 
-  it("returns markdown for a supported x status page", async () => {
-    source.fetchRootPostPayload.mockResolvedValue({
-      rootPost: {
-        id: "1234567890",
-        authorHandle: "example",
-        postedAt: "2025-01-01T23:30:00.000Z",
-        text: "Hello from X https://t.co/demo",
-        retweetCount: 12,
-        likeCount: 34,
-        links: [
-          "https://example.com/article",
-          "https://pbs.twimg.com/media/demo.jpg",
-        ],
+  it("returns markdown for a supported x status page with direct replies", async () => {
+    source.fetchConversationPayload.mockResolvedValue({
+      data: {
+        threaded_conversation_with_injections_v2: {
+          instructions: [
+            {
+              type: "TimelineAddEntries",
+              entries: [
+                {
+                  entryId: "tweet-1234567890",
+                  content: {
+                    itemContent: {
+                      tweet_results: {
+                        result: {
+                          __typename: "Tweet",
+                          rest_id: "1234567890",
+                          core: {
+                            user_results: {
+                              result: {
+                                legacy: {
+                                  screen_name: "example",
+                                },
+                              },
+                            },
+                          },
+                          legacy: {
+                            created_at: "Wed Jan 01 23:30:00 +0000 2025",
+                            full_text: "Hello from X",
+                            retweet_count: 12,
+                            favorite_count: 34,
+                            entities: {},
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  entryId: "tweet-2233445566",
+                  content: {
+                    itemContent: {
+                      tweet_results: {
+                        result: {
+                          __typename: "Tweet",
+                          rest_id: "2233445566",
+                          core: {
+                            user_results: {
+                              result: {
+                                legacy: {
+                                  screen_name: "reply_one",
+                                },
+                              },
+                            },
+                          },
+                          legacy: {
+                            created_at: "Thu Jan 02 00:00:00 +0000 2025",
+                            full_text: "First reply",
+                            in_reply_to_status_id_str: "1234567890",
+                            retweet_count: 1,
+                            favorite_count: 2,
+                            entities: {},
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                {
+                  entryId: "tweet-9988776655",
+                  content: {
+                    itemContent: {
+                      tweet_results: {
+                        result: {
+                          __typename: "Tweet",
+                          rest_id: "9988776655",
+                          core: {
+                            user_results: {
+                              result: {
+                                legacy: {
+                                  screen_name: "reply_two",
+                                },
+                              },
+                            },
+                          },
+                          legacy: {
+                            created_at: "Thu Jan 02 01:15:00 +0000 2025",
+                            full_text: "Second reply",
+                            in_reply_to_status_id_str: "1234567890",
+                            retweet_count: 3,
+                            favorite_count: 5,
+                            entities: {
+                              urls: [
+                                {
+                                  expanded_url: "https://example.com/reply",
+                                },
+                              ],
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
       },
     });
 
@@ -55,19 +149,19 @@ describe("x capture", () => {
         url: "https://x.com/example/status/1234567890",
       }),
     ).resolves.toEqual({
-      markdown: readExpected("root-post.expected.md"),
+      markdown: readExpected("root-with-direct-replies.expected.md"),
       sourceUrl: "https://x.com/example/status/1234567890",
     });
 
-    expect(source.fetchRootPostPayload).toHaveBeenCalledWith({
+    expect(source.fetchConversationPayload).toHaveBeenCalledWith({
       tabId: 7,
       url: "https://x.com/example/status/1234567890",
     });
   });
 
-  it("surfaces extraction failures as capture errors", async () => {
-    source.fetchRootPostPayload.mockRejectedValue(
-      new Error("Failed to extract the X root post from the page."),
+  it("surfaces replay failures as capture errors", async () => {
+    source.fetchConversationPayload.mockRejectedValue(
+      new Error("No captured X conversation request is available for this page."),
     );
 
     await expect(
@@ -75,6 +169,8 @@ describe("x capture", () => {
         tabId: 7,
         url: "https://x.com/example/status/1234567890",
       }),
-    ).rejects.toThrow("Failed to extract the X root post from the page.");
+    ).rejects.toThrow(
+      "No captured X conversation request is available for this page.",
+    );
   });
 });

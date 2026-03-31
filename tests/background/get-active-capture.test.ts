@@ -119,15 +119,76 @@ describe("getActiveCapture", () => {
 
   it("routes supported x status pages through the provider boundary", async () => {
     const source = {
-      fetchRootPostPayload: vi.fn().mockResolvedValue({
-        rootPost: {
-          id: "1234567890",
-          authorHandle: "example",
-          postedAt: "2025-01-01T23:30:00.000Z",
-          text: "Hello from X",
-          retweetCount: 12,
-          likeCount: 34,
-          links: [],
+      fetchConversationPayload: vi.fn().mockResolvedValue({
+        data: {
+          threaded_conversation_with_injections_v2: {
+            instructions: [
+              {
+                type: "TimelineAddEntries",
+                entries: [
+                  {
+                    entryId: "tweet-1234567890",
+                    content: {
+                      itemContent: {
+                        tweet_results: {
+                          result: {
+                            __typename: "Tweet",
+                            rest_id: "1234567890",
+                            core: {
+                              user_results: {
+                                result: {
+                                  legacy: {
+                                    screen_name: "example",
+                                  },
+                                },
+                              },
+                            },
+                            legacy: {
+                              created_at: "Wed Jan 01 23:30:00 +0000 2025",
+                              full_text: "Hello from X",
+                              retweet_count: 12,
+                              favorite_count: 34,
+                              entities: {},
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    entryId: "tweet-2233445566",
+                    content: {
+                      itemContent: {
+                        tweet_results: {
+                          result: {
+                            __typename: "Tweet",
+                            rest_id: "2233445566",
+                            core: {
+                              user_results: {
+                                result: {
+                                  legacy: {
+                                    screen_name: "reply_one",
+                                  },
+                                },
+                              },
+                            },
+                            legacy: {
+                              created_at: "Thu Jan 02 00:00:00 +0000 2025",
+                              full_text: "First reply",
+                              in_reply_to_status_id_str: "1234567890",
+                              retweet_count: 1,
+                              favorite_count: 2,
+                              entities: {},
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
         },
       }),
     };
@@ -152,12 +213,13 @@ https://x.com/example/status/1234567890
 
 January 1, 2025 at 11:30 PM
 
-- @example | January 1, 2025 at 11:30 PM | Hello from X | Reposts 12 | Likes 34`,
+- @example | January 1, 2025 at 11:30 PM | Hello from X | Reposts 12 | Likes 34
+  - @reply_one | January 2, 2025 at 12:00 AM | First reply | Reposts 1 | Likes 2`,
         sourceUrl: "https://x.com/example/status/1234567890",
       },
     });
 
-    expect(source.fetchRootPostPayload).toHaveBeenCalledWith({
+    expect(source.fetchConversationPayload).toHaveBeenCalledWith({
       tabId: 11,
       url: "https://x.com/example/status/1234567890",
     });
@@ -173,7 +235,7 @@ January 1, 2025 at 11:30 PM
 
     await expect(getActiveCapture()).resolves.toEqual({
       state: "error",
-      error: "X root-post extraction requires the Chrome scripting API.",
+      error: "X conversation replay requires the Chrome scripting API.",
     });
   });
 });

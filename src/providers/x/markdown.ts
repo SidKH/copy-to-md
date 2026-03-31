@@ -1,4 +1,4 @@
-import type { XPost, XThread } from "@/providers/x/model";
+import type { XPost, XReply, XThread } from "@/providers/x/model";
 
 export function formatXThreadAsMarkdown(
   thread: XThread,
@@ -13,8 +13,22 @@ export function formatXThreadAsMarkdown(
     "",
     rootPostDate,
     "",
-    formatPost(thread.rootPost, 0),
+    ...formatThread(thread),
   ].join("\n");
+}
+
+function formatThread(thread: XThread): string[] {
+  return [
+    formatPost(thread.rootPost, 0),
+    ...thread.replies.flatMap((reply) => formatReply(reply, 1)),
+  ];
+}
+
+function formatReply(reply: XReply, depth: number): string[] {
+  return [
+    formatPost(reply.post, depth),
+    ...reply.replies.flatMap((childReply) => formatReply(childReply, depth + 1)),
+  ];
 }
 
 function formatPost(post: XPost, depth: number): string {

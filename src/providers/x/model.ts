@@ -8,7 +8,12 @@ export type XPost = {
   links: string[];
 };
 
+export type XReply = {
+  post: XPost;
+  replies: XReply[];
+};
+
 export type XThread = {
   rootPost: XPost;
-  replies: XPost[];
+  replies: XReply[];
 };
